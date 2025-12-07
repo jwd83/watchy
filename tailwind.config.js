@@ -1,9 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: [
-    "./src/renderer/index.html",
-    "./src/renderer/src/**/*.{js,ts,jsx,tsx}",
-  ],
+  content: ['./src/renderer/index.html', './src/renderer/src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
       colors: {
@@ -11,9 +8,9 @@ module.exports = {
         surface: '#1e293b', // Slate 800
         primary: '#3b82f6', // Blue 500
         secondary: '#64748b', // Slate 500
-        accent: '#8b5cf6', // Violet 500
+        accent: '#8b5cf6' // Violet 500
       }
-    },
+    }
   },
-  plugins: [],
+  plugins: []
 }
