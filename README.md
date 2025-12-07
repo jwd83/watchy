@@ -57,6 +57,47 @@ npm run build:win
 npm run build:linux
 ```
 
+### Creating a Release
+
+To build distributable installers for macOS and Windows:
+
+**Quick Method** (recommended):
+```bash
+./build-release.sh
+```
+
+This will:
+1. Clean the `dist/` folder
+2. Generate icons
+3. Build macOS DMG installer (~119 MB)
+4. Build Windows installer (~99 MB)
+5. Display the distributable files
+
+**Manual Method**:
+
+1. **Update version number** in `package.json`
+
+2. **Generate icons** (if icon was updated):
+   ```bash
+   npm run icon:generate
+   ```
+
+3. **Build for macOS**:
+   ```bash
+   npm run build:mac
+   ```
+   Output: `dist/watchy-{version}.dmg`
+
+4. **Build for Windows**:
+   ```bash
+   npm run build:win
+   ```
+   Output: `dist/watchy-{version}-setup.exe`
+
+5. **Distribute** the installers from the `dist/` folder
+
+**Note**: Windows builds created on macOS are unsigned. For production releases, build on Windows with a code signing certificate to avoid security warnings.
+
 ## Getting Started
 
 1.  **Launch the App**: Run `npm run dev` or open your built application.

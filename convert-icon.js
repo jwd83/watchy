@@ -2,6 +2,7 @@ import sharp from 'sharp';
 import { readFileSync } from 'fs';
 import pngToIco from 'png-to-ico';
 import { writeFileSync } from 'fs';
+import png2icons from 'png2icons';
 
 const sourcePng = './resources/icon.png';
 
@@ -46,6 +47,11 @@ const icoPaths = [
 const icoBuffer = await pngToIco(icoPaths);
 writeFileSync('./build/icon.ico', icoBuffer);
 
+// Generate macOS .icns file
+const sourceBuffer = readFileSync(sourcePng);
+const icnsBuffer = await png2icons.createICNS(sourceBuffer, png2icons.BICUBIC, 0);
+writeFileSync('./build/icon.icns', icnsBuffer);
+
 // Clean up temporary files
 import { unlinkSync } from 'fs';
 for (const { path } of sizes) {
@@ -58,3 +64,4 @@ console.log('All icons generated successfully!');
 console.log('Generated:');
 console.log('  - build/icon.png (256x256)');
 console.log('  - build/icon.ico (Windows, multi-size)');
+console.log('  - build/icon.icns (macOS, multi-size)');
