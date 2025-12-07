@@ -9,7 +9,14 @@ const api = {
   getFiles: (link) => ipcRenderer.invoke('api:getFiles', link),
   play: (url) => ipcRenderer.invoke('api:play', url),
   saveKey: (key) => ipcRenderer.invoke('api:saveKey', key),
-  getKey: () => ipcRenderer.invoke('api:getKey')
+  getKey: () => ipcRenderer.invoke('api:getKey'),
+  // Library APIs
+  getSavedSearches: () => ipcRenderer.invoke('api:getSavedSearches'),
+  addSavedSearch: (query) => ipcRenderer.invoke('api:addSavedSearch', query),
+  removeSavedSearch: (id) => ipcRenderer.invoke('api:removeSavedSearch', id),
+  getSavedMagnets: () => ipcRenderer.invoke('api:getSavedMagnets'),
+  addSavedMagnet: (magnetData) => ipcRenderer.invoke('api:addSavedMagnet', magnetData),
+  removeSavedMagnet: (id) => ipcRenderer.invoke('api:removeSavedMagnet', id)
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

@@ -5,6 +5,7 @@ import icon from '../../resources/icon.png?asset'
 import allDebrid from './services/allDebrid'
 import scraper from './services/scraper'
 import vlc from './services/vlc'
+import library from './services/library'
 
 function createWindow() {
   // Create the browser window.
@@ -84,6 +85,31 @@ app.whenReady().then(() => {
 
   ipcMain.handle('api:getKey', () => {
     return allDebrid.apiKey
+  })
+
+  // Library handlers
+  ipcMain.handle('api:getSavedSearches', () => {
+    return library.getSavedSearches()
+  })
+
+  ipcMain.handle('api:addSavedSearch', (_, query) => {
+    return library.addSavedSearch(query)
+  })
+
+  ipcMain.handle('api:removeSavedSearch', (_, id) => {
+    return library.removeSavedSearch(id)
+  })
+
+  ipcMain.handle('api:getSavedMagnets', () => {
+    return library.getSavedMagnets()
+  })
+
+  ipcMain.handle('api:addSavedMagnet', (_, magnetData) => {
+    return library.addSavedMagnet(magnetData)
+  })
+
+  ipcMain.handle('api:removeSavedMagnet', (_, id) => {
+    return library.removeSavedMagnet(id)
   })
 
   createWindow()

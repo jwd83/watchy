@@ -3,6 +3,8 @@ import SearchBar from './components/SearchBar'
 import ResultCard from './components/ResultCard'
 import FileUserInterface from './components/FileUserInterface'
 import SettingsModal from './components/SettingsModal'
+import Library from './components/Library'
+import Toast from './components/Toast'
 
 function App() {
   const [results, setResults] = useState([])
@@ -10,6 +12,11 @@ function App() {
   const [isLoading, setIsLoading] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [statusMessage, setStatusMessage] = useState('')
+  const [currentQuery, setCurrentQuery] = useState('')
+  const [view, setView] = useState('search') // 'search' or 'library'
+  const [savedSearches, setSavedSearches] = useState([])
+  const [savedMagnets, setSavedMagnets] = useState([])
+  const [toast, setToast] = useState(null)
 
   useEffect(() => {
     window.api.getKey().then((key) => {
@@ -17,12 +24,26 @@ function App() {
         setIsSettingsOpen(true)
       }
     })
+    loadLibrary()
   }, [])
+
+  const loadLibrary = async () => {
+    const searches = await window.api.getSavedSearches()
+    const magnets = await window.api.getSavedMagnets()
+    setSavedSearches(searches)
+    setSavedMagnets(magnets)
+  }
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type })
+  }
 
   const handleSearch = async (query) => {
     setIsLoading(true)
     setResults([])
     setFiles([])
+    setCurrentQuery(query)
+    setView('search')
     setStatusMessage('Searching P2P networks...')
     try {
       const searchResults = await window.api.search(query)
@@ -40,8 +61,49 @@ function App() {
     }
   }
 
+  const handleSaveSearch = async (query) => {
+    const result = await window.api.addSavedSearch(query)
+    if (result.success) {
+      showToast(result.message)
+      await loadLibrary()
+    } else {
+      showToast(result.message, 'error')
+    }
+  }
+
+  const handleRemoveSearch = async (id) => {
+    const result = await window.api.removeSavedSearch(id)
+    showToast(result.message)
+    await loadLibrary()
+  }
+
+  const handleSaveMagnet = async (result) => {
+    const magnetData = {
+      title: result.title,
+      magnet: result.magnet,
+      size: result.size,
+      seeds: result.seeds,
+      leeches: result.leeches
+    }
+    const response = await window.api.addSavedMagnet(magnetData)
+    if (response.success) {
+      showToast(response.message)
+      await loadLibrary()
+    } else {
+      showToast(response.message, 'error')
+    }
+  }
+
+  const handleRemoveMagnet = async (id) => {
+    const result = await window.api.removeSavedMagnet(id)
+    showToast(result.message)
+    await loadLibrary()
+  }
+
   const handleSelectResult = async (result) => {
     setIsLoading(true)
+    setView('search') // Switch to search view to show files
+    setResults([]) // Clear search results
     setStatusMessage(`Unlocking "${result.title}"...`)
     try {
       const uploadResponse = await window.api.unlock(result.magnet)
@@ -123,59 +185,114 @@ function App() {
   return (
     <div className="min-h-screen bg-background p-8">
       <div className="max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-12">
+        <div className="flex justify-between items-center mb-8">
           <h1 className="text-4xl font-black bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
             Watchy
           </h1>
-          <button
-            onClick={() => setIsSettingsOpen(true)}
-            className="p-2 text-gray-400 hover:text-white transition-colors"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
+          <div className="flex gap-4 items-center">
+            <button
+              onClick={() => setView('search')}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                view === 'search'
+                  ? 'bg-primary text-white'
+                  : 'text-gray-400 hover:text-white hover:bg-surface'
+              }`}
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-              />
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-              />
-            </svg>
-          </button>
+              Search
+            </button>
+            <button
+              onClick={() => setView('library')}
+              className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+                view === 'library'
+                  ? 'bg-primary text-white'
+                  : 'text-gray-400 hover:text-white hover:bg-surface'
+              }`}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+              </svg>
+              Library
+            </button>
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              className="p-2 text-gray-400 hover:text-white transition-colors"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                />
+              </svg>
+            </button>
+          </div>
         </div>
 
-        <SearchBar onSearch={handleSearch} isLoading={isLoading} />
-
-        {statusMessage && (
-          <div className="text-center text-gray-400 mb-8 animate-pulse">{statusMessage}</div>
-        )}
-
-        {files.length > 0 ? (
-          <div>
-            <button
-              onClick={() => setFiles([])}
-              className="mb-4 text-sm text-gray-400 hover:text-white flex items-center gap-2"
-            >
-              ← Back to results
-            </button>
-            <FileUserInterface files={files} onPlay={handlePlay} />
-          </div>
+        {view === 'library' ? (
+          <Library
+            savedSearches={savedSearches}
+            savedMagnets={savedMagnets}
+            onSearchSelect={handleSearch}
+            onMagnetSelect={handleSelectResult}
+            onRemoveSearch={handleRemoveSearch}
+            onRemoveMagnet={handleRemoveMagnet}
+          />
         ) : (
-          <div className="grid gap-4">
-            {results.map((result, index) => (
-              <ResultCard key={index} result={result} onSelect={handleSelectResult} />
-            ))}
-          </div>
+          <>
+            <SearchBar
+              onSearch={handleSearch}
+              onSaveSearch={handleSaveSearch}
+              isLoading={isLoading}
+              currentQuery={currentQuery}
+            />
+
+            {statusMessage && (
+              <div className="text-center text-gray-400 mb-8 animate-pulse">
+                {statusMessage}
+              </div>
+            )}
+
+            {files.length > 0 ? (
+              <div>
+                <button
+                  onClick={() => setFiles([])}
+                  className="mb-4 text-sm text-gray-400 hover:text-white flex items-center gap-2"
+                >
+                  ← Back to results
+                </button>
+                <FileUserInterface files={files} onPlay={handlePlay} />
+              </div>
+            ) : (
+              <div className="grid gap-4">
+                {results.map((result, index) => (
+                  <ResultCard
+                    key={index}
+                    result={result}
+                    onSelect={handleSelectResult}
+                    onSave={handleSaveMagnet}
+                  />
+                ))}
+              </div>
+            )}
+          </>
         )}
 
         <SettingsModal
@@ -183,6 +300,8 @@ function App() {
           onClose={() => setIsSettingsOpen(false)}
           onSave={handleSaveSettings}
         />
+
+        {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       </div>
     </div>
   )
