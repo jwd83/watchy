@@ -4,6 +4,7 @@ import ResultCard from './components/ResultCard'
 import FileUserInterface from './components/FileUserInterface'
 import SettingsModal from './components/SettingsModal'
 import Library from './components/Library'
+import History from './components/History'
 import Toast from './components/Toast'
 
 function App() {
@@ -13,10 +14,12 @@ function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [statusMessage, setStatusMessage] = useState('')
   const [currentQuery, setCurrentQuery] = useState('')
-  const [view, setView] = useState('search') // 'search' or 'library'
+  const [view, setView] = useState('search') // 'search', 'library', or 'history'
   const [savedSearches, setSavedSearches] = useState([])
   const [savedMagnets, setSavedMagnets] = useState([])
+  const [history, setHistory] = useState([])
   const [toast, setToast] = useState(null)
+  const [currentMagnet, setCurrentMagnet] = useState(null) // { hash, title }
 
   useEffect(() => {
     window.api.getKey().then((key) => {
@@ -25,6 +28,7 @@ function App() {
       }
     })
     loadLibrary()
+    loadHistory()
   }, [])
 
   const loadLibrary = async () => {
@@ -32,6 +36,11 @@ function App() {
     const magnets = await window.api.getSavedMagnets()
     setSavedSearches(searches)
     setSavedMagnets(magnets)
+  }
+
+  const loadHistory = async () => {
+    const historyData = await window.api.getHistory()
+    setHistory(historyData)
   }
 
   const showToast = (message, type = 'success') => {
@@ -105,6 +114,13 @@ function App() {
     setView('search') // Switch to search view to show files
     setResults([]) // Clear search results
     setStatusMessage(`Unlocking "${result.title}"...`)
+
+    // Store current magnet context for history tracking
+    setCurrentMagnet({
+      hash: extractMagnetHash(result.magnet),
+      title: result.title
+    })
+
     try {
       const uploadResponse = await window.api.unlock(result.magnet)
 
@@ -173,13 +189,43 @@ function App() {
     }
   }
 
-  const handlePlay = (url) => {
+  const extractMagnetHash = (magnetLink) => {
+    // Extract hash from magnet link (magnet:?xt=urn:btih:HASH&...)
+    const match = magnetLink.match(/btih:([a-zA-Z0-9]+)/)
+    return match ? match[1].toLowerCase() : magnetLink
+  }
+
+  const handlePlay = async (url, filename) => {
     window.api.play(url)
+
+    // Record play in history if we have current magnet context
+    if (currentMagnet) {
+      await window.api.recordPlay(currentMagnet.hash, currentMagnet.title, filename, url)
+      await loadHistory()
+    }
   }
 
   const handleSaveSettings = async (key) => {
     await window.api.saveKey(key)
     setIsSettingsOpen(false)
+  }
+
+  const handleRemoveHistoryEntry = async (id) => {
+    const result = await window.api.removeHistoryEntry(id)
+    showToast(result.message)
+    await loadHistory()
+  }
+
+  const handleRemoveAllHistory = async () => {
+    const result = await window.api.removeAllHistory()
+    showToast(result.message)
+    await loadHistory()
+  }
+
+  const handleResetFileWatched = async (historyId, filename) => {
+    const result = await window.api.resetFileWatched(historyId, filename)
+    showToast(result.message)
+    await loadHistory()
   }
 
   return (
@@ -219,6 +265,28 @@ function App() {
               Library
             </button>
             <button
+              onClick={() => setView('history')}
+              className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+                view === 'history'
+                  ? 'bg-primary text-white'
+                  : 'text-gray-400 hover:text-white hover:bg-surface'
+              }`}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              History
+            </button>
+            <button
               onClick={() => setIsSettingsOpen(true)}
               className="p-2 text-gray-400 hover:text-white transition-colors"
             >
@@ -246,7 +314,15 @@ function App() {
           </div>
         </div>
 
-        {view === 'library' ? (
+        {view === 'history' ? (
+          <History
+            history={history}
+            onRemoveEntry={handleRemoveHistoryEntry}
+            onRemoveAll={handleRemoveAllHistory}
+            onResetFile={handleResetFileWatched}
+            onPlayFile={(url) => window.api.play(url)}
+          />
+        ) : view === 'library' ? (
           <Library
             savedSearches={savedSearches}
             savedMagnets={savedMagnets}
@@ -265,9 +341,7 @@ function App() {
             />
 
             {statusMessage && (
-              <div className="text-center text-gray-400 mb-8 animate-pulse">
-                {statusMessage}
-              </div>
+              <div className="text-center text-gray-400 mb-8 animate-pulse">{statusMessage}</div>
             )}
 
             {files.length > 0 ? (
@@ -278,7 +352,17 @@ function App() {
                 >
                   ← Back to results
                 </button>
-                <FileUserInterface files={files} onPlay={handlePlay} />
+                <FileUserInterface
+                  files={files}
+                  onPlay={handlePlay}
+                  watchedFiles={
+                    currentMagnet
+                      ? history
+                          .find((h) => h.magnetHash === currentMagnet.hash)
+                          ?.files.map((f) => f.filename) || []
+                      : []
+                  }
+                />
               </div>
             ) : (
               <div className="grid gap-4">
@@ -301,7 +385,9 @@ function App() {
           onSave={handleSaveSettings}
         />
 
-        {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+        {toast && (
+          <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
+        )}
       </div>
     </div>
   )

@@ -16,7 +16,15 @@ const api = {
   removeSavedSearch: (id) => ipcRenderer.invoke('api:removeSavedSearch', id),
   getSavedMagnets: () => ipcRenderer.invoke('api:getSavedMagnets'),
   addSavedMagnet: (magnetData) => ipcRenderer.invoke('api:addSavedMagnet', magnetData),
-  removeSavedMagnet: (id) => ipcRenderer.invoke('api:removeSavedMagnet', id)
+  removeSavedMagnet: (id) => ipcRenderer.invoke('api:removeSavedMagnet', id),
+  // History APIs
+  getHistory: () => ipcRenderer.invoke('api:getHistory'),
+  recordPlay: (magnetHash, magnetTitle, filename, streamUrl) =>
+    ipcRenderer.invoke('api:recordPlay', magnetHash, magnetTitle, filename, streamUrl),
+  removeHistoryEntry: (id) => ipcRenderer.invoke('api:removeHistoryEntry', id),
+  removeAllHistory: () => ipcRenderer.invoke('api:removeAllHistory'),
+  resetFileWatched: (historyId, filename) =>
+    ipcRenderer.invoke('api:resetFileWatched', historyId, filename)
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

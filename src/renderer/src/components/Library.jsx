@@ -22,10 +22,7 @@ const Library = ({
                 key={search.id}
                 className="bg-surface p-4 rounded-xl border border-gray-700 hover:border-primary transition-all group flex justify-between items-center"
               >
-                <button
-                  onClick={() => onSearchSelect(search.query)}
-                  className="flex-1 text-left"
-                >
+                <button onClick={() => onSearchSelect(search.query)} className="flex-1 text-left">
                   <div className="text-lg group-hover:text-primary transition-colors">
                     {search.query}
                   </div>
@@ -70,10 +67,7 @@ const Library = ({
                 className="bg-surface p-4 rounded-xl border border-gray-700 hover:border-primary transition-all group"
               >
                 <div className="flex justify-between items-start">
-                  <button
-                    onClick={() => onMagnetSelect(item)}
-                    className="flex-1 text-left"
-                  >
+                  <button onClick={() => onMagnetSelect(item)} className="flex-1 text-left">
                     <h3
                       className="text-lg font-semibold mb-2 group-hover:text-primary transition-colors truncate"
                       title={item.title}

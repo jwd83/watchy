@@ -112,6 +112,27 @@ app.whenReady().then(() => {
     return library.removeSavedMagnet(id)
   })
 
+  // History handlers
+  ipcMain.handle('api:getHistory', () => {
+    return library.getHistory()
+  })
+
+  ipcMain.handle('api:recordPlay', (_, magnetHash, magnetTitle, filename, streamUrl) => {
+    return library.recordPlay(magnetHash, magnetTitle, filename, streamUrl)
+  })
+
+  ipcMain.handle('api:removeHistoryEntry', (_, id) => {
+    return library.removeHistoryEntry(id)
+  })
+
+  ipcMain.handle('api:removeAllHistory', () => {
+    return library.removeAllHistory()
+  })
+
+  ipcMain.handle('api:resetFileWatched', (_, historyId, filename) => {
+    return library.resetFileWatched(historyId, filename)
+  })
+
   createWindow()
 
   app.on('activate', function () {

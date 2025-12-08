@@ -1,10 +1,10 @@
-import sharp from 'sharp';
-import { readFileSync } from 'fs';
-import pngToIco from 'png-to-ico';
-import { writeFileSync } from 'fs';
-import png2icons from 'png2icons';
+import sharp from 'sharp'
+import { readFileSync } from 'fs'
+import pngToIco from 'png-to-ico'
+import { writeFileSync } from 'fs'
+import png2icons from 'png2icons'
 
-const sourcePng = './resources/icon.png';
+const sourcePng = './resources/icon.png'
 
 // Generate PNGs at different sizes
 const sizes = [
@@ -17,21 +17,15 @@ const sizes = [
   { size: 256, path: './build/icon-256.png' },
   { size: 512, path: './build/icon-512.png' },
   { size: 1024, path: './build/icon-1024.png' }
-];
+]
 
 for (const { size, path } of sizes) {
-  await sharp(sourcePng)
-    .resize(size, size)
-    .png()
-    .toFile(path);
-  console.log(`Generated ${path}`);
+  await sharp(sourcePng).resize(size, size).png().toFile(path)
+  console.log(`Generated ${path}`)
 }
 
 // Build icon (256x256 is common)
-await sharp(sourcePng)
-  .resize(256, 256)
-  .png()
-  .toFile('./build/icon.png');
+await sharp(sourcePng).resize(256, 256).png().toFile('./build/icon.png')
 
 // Generate Windows .ico file (contains multiple sizes)
 const icoPaths = [
@@ -42,26 +36,26 @@ const icoPaths = [
   './build/icon-64.png',
   './build/icon-128.png',
   './build/icon-256.png'
-];
+]
 
-const icoBuffer = await pngToIco(icoPaths);
-writeFileSync('./build/icon.ico', icoBuffer);
+const icoBuffer = await pngToIco(icoPaths)
+writeFileSync('./build/icon.ico', icoBuffer)
 
 // Generate macOS .icns file
-const sourceBuffer = readFileSync(sourcePng);
-const icnsBuffer = await png2icons.createICNS(sourceBuffer, png2icons.BICUBIC, 0);
-writeFileSync('./build/icon.icns', icnsBuffer);
+const sourceBuffer = readFileSync(sourcePng)
+const icnsBuffer = await png2icons.createICNS(sourceBuffer, png2icons.BICUBIC, 0)
+writeFileSync('./build/icon.icns', icnsBuffer)
 
 // Clean up temporary files
-import { unlinkSync } from 'fs';
+import { unlinkSync } from 'fs'
 for (const { path } of sizes) {
   try {
-    unlinkSync(path);
+    unlinkSync(path)
   } catch (e) {}
 }
 
-console.log('All icons generated successfully!');
-console.log('Generated:');
-console.log('  - build/icon.png (256x256)');
-console.log('  - build/icon.ico (Windows, multi-size)');
-console.log('  - build/icon.icns (macOS, multi-size)');
+console.log('All icons generated successfully!')
+console.log('Generated:')
+console.log('  - build/icon.png (256x256)')
+console.log('  - build/icon.ico (Windows, multi-size)')
+console.log('  - build/icon.icns (macOS, multi-size)')

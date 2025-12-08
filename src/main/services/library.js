@@ -60,6 +60,97 @@ class LibraryService {
     store.set('savedMagnets', filtered)
     return { success: true, message: 'Removed from library' }
   }
+
+  // History Management
+  getHistory() {
+    return store.get('history', [])
+  }
+
+  recordPlay(magnetHash, magnetTitle, filename, streamUrl) {
+    const history = this.getHistory()
+    const now = new Date().toISOString()
+
+    // Find existing history entry for this magnet
+    let historyEntry = history.find((h) => h.magnetHash === magnetHash)
+
+    if (historyEntry) {
+      // Find existing file entry
+      const fileEntry = historyEntry.files.find((f) => f.filename === filename)
+
+      if (fileEntry) {
+        // Update existing file entry
+        fileEntry.playCount += 1
+        fileEntry.playedAt = now
+      } else {
+        // Add new file entry
+        historyEntry.files.push({
+          filename,
+          streamUrl,
+          playedAt: now,
+          playCount: 1
+        })
+      }
+
+      historyEntry.lastPlayedAt = now
+    } else {
+      // Create new history entry
+      historyEntry = {
+        id: Date.now().toString(),
+        magnetHash,
+        magnetTitle,
+        files: [
+          {
+            filename,
+            streamUrl,
+            playedAt: now,
+            playCount: 1
+          }
+        ],
+        firstPlayedAt: now,
+        lastPlayedAt: now
+      }
+      history.unshift(historyEntry)
+    }
+
+    // Sort history by last played (most recent first)
+    history.sort((a, b) => new Date(b.lastPlayedAt) - new Date(a.lastPlayedAt))
+
+    store.set('history', history)
+    return { success: true }
+  }
+
+  removeHistoryEntry(id) {
+    const history = this.getHistory()
+    const filtered = history.filter((h) => h.id !== id)
+    store.set('history', filtered)
+    return { success: true, message: 'History entry removed' }
+  }
+
+  removeAllHistory() {
+    store.set('history', [])
+    return { success: true, message: 'All history cleared' }
+  }
+
+  resetFileWatched(historyId, filename) {
+    const history = this.getHistory()
+    const historyEntry = history.find((h) => h.id === historyId)
+
+    if (historyEntry) {
+      historyEntry.files = historyEntry.files.filter((f) => f.filename !== filename)
+
+      // If no files left, remove the entire history entry
+      if (historyEntry.files.length === 0) {
+        const filtered = history.filter((h) => h.id !== historyId)
+        store.set('history', filtered)
+        return { success: true, message: 'History entry removed' }
+      } else {
+        store.set('history', history)
+        return { success: true, message: 'File watch status reset' }
+      }
+    }
+
+    return { success: false, message: 'History entry not found' }
+  }
 }
 
 export default new LibraryService()
