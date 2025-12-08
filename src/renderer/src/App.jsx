@@ -112,7 +112,6 @@ function App() {
   const handleSelectResult = async (result) => {
     setIsLoading(true)
     setView('search') // Switch to search view to show files
-    setResults([]) // Clear search results
     setStatusMessage(`Unlocking "${result.title}"...`)
 
     // Store current magnet context for history tracking
@@ -358,10 +357,13 @@ function App() {
             {files.length > 0 ? (
               <div>
                 <button
-                  onClick={() => setFiles([])}
+                  onClick={() => {
+                    setFiles([])
+                    setStatusMessage('')
+                  }}
                   className="mb-4 text-sm text-gray-400 hover:text-white flex items-center gap-2"
                 >
-                  ← Back to results
+                  {results.length > 0 ? '← Back to results' : '← Back to search'}
                 </button>
                 <FileUserInterface
                   files={files}
