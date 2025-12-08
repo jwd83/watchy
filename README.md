@@ -4,7 +4,7 @@
 
 ## Features
 
-- **Integrated Search**: Search P2P networks (e.g., 1337x) directly from the app.
+- **Integrated Search**: Search P2P networks directly from the app.
 - **Instant Caching**: Automatically uploads magnet links to AllDebrid for high-speed caching.
 - **Direct Streaming**: Unlocks video files and streams them directly to VLC Media Player.
 - **Modern UI**: A sleek, responsive interface designed for a premium user experience.
