@@ -228,6 +228,16 @@ function App() {
     await loadHistory()
   }
 
+  const handleViewMagnetFromHistory = (magnetHash, magnetTitle) => {
+    // Reconstruct magnet link from hash
+    const magnetLink = `magnet:?xt=urn:btih:${magnetHash}`
+    const result = {
+      magnet: magnetLink,
+      title: magnetTitle
+    }
+    handleSelectResult(result)
+  }
+
   return (
     <div className="min-h-screen bg-background p-8">
       <div className="max-w-4xl mx-auto">
@@ -321,6 +331,7 @@ function App() {
             onRemoveAll={handleRemoveAllHistory}
             onResetFile={handleResetFileWatched}
             onPlayFile={(url) => window.api.play(url)}
+            onViewMagnet={handleViewMagnetFromHistory}
           />
         ) : view === 'library' ? (
           <Library

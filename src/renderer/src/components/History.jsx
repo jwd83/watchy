@@ -1,6 +1,6 @@
 import React from 'react'
 
-const History = ({ history, onRemoveEntry, onRemoveAll, onResetFile, onPlayFile }) => {
+const History = ({ history, onRemoveEntry, onRemoveAll, onResetFile, onPlayFile, onViewMagnet }) => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -59,7 +59,7 @@ const History = ({ history, onRemoveEntry, onRemoveAll, onResetFile, onPlayFile 
                 </button>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2 mb-4">
                 {entry.files.map((file, index) => (
                   <div
                     key={index}
@@ -116,6 +116,21 @@ const History = ({ history, onRemoveEntry, onRemoveAll, onResetFile, onPlayFile 
                   </div>
                 ))}
               </div>
+              <button
+                onClick={() => onViewMagnet(entry.magnetHash, entry.magnetTitle)}
+                className="w-full px-4 py-2 bg-primary hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path d="M9 2a2 2 0 00-2 2v8a2 2 0 002 2h6a2 2 0 002-2V6.414A2 2 0 0016.414 5L14 2.586A2 2 0 0012.586 2H9z" />
+                  <path d="M3 8a2 2 0 012-2v10h8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
+                </svg>
+                View All Files
+              </button>
             </div>
           ))}
         </div>
