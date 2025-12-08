@@ -111,7 +111,3 @@ This will:
 -   **VLC not opening?** Ensure VLC is installed in the default system location.
 -   **No search results?** The scraper may be blocked by your ISP or the source site might be down.
 -   **Unlock failed?** Verify your AllDebrid API key and subscription status.
-
-## License
-
-[MIT](LICENSE)
