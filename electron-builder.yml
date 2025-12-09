@@ -14,7 +14,6 @@ extraResources:
 win:
   icon: build/icon.ico
   executableName: watchy
-  signAndEditExecutable: false
   target:
     - nsis
 nsis:
@@ -26,11 +25,6 @@ nsis:
   artifactName: ${name}-${version}-setup.${ext}
 mac:
   entitlementsInherit: build/entitlements.mac.plist
-  extendInfo:
-    - NSCameraUsageDescription: Application requests access to the device's camera.
-    - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
-    - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
-    - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
   notarize: false
   target:
     - dmg

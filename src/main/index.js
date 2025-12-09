@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, nativeImage } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import allDebrid from './services/allDebrid'
@@ -12,13 +12,16 @@ function createWindow() {
     ? join(__dirname, '../../build/icon.ico')
     : join(process.resourcesPath, 'icon.ico')
   
+  // Create native image from icon
+  const appIcon = nativeImage.createFromPath(iconPath)
+  
   // Create the browser window.
   const mainWindow = new BrowserWindow({
     width: 900,
     height: 670,
     show: false,
     autoHideMenuBar: true,
-    icon: iconPath,
+    icon: appIcon,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false
@@ -28,11 +31,12 @@ function createWindow() {
   mainWindow.on('ready-to-show', () => {
     mainWindow.setTitle(`Watchy v${app.getVersion()}`)
     
-    // Set taskbar properties for Windows 11
+    // Force set icon for Windows taskbar
     if (process.platform === 'win32') {
+      mainWindow.setIcon(appIcon)
       mainWindow.setAppDetails({
         appId: 'com.watchy.app',
-        appIconPath: iconPath,
+        // appIconPath: iconPath,
         appIconIndex: 0,
         relaunchDisplayName: 'Watchy'
       })
