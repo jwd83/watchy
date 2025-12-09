@@ -111,7 +111,6 @@ def clean_dist_folder():
         else:
             print("dist/ folder does not exist, nothing to clean.")
         os.makedirs('dist')
-        os.makedirs('release')
         print("dist/ folder created.")
 
 def build_macos():
