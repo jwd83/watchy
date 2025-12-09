@@ -14,9 +14,14 @@ win:
   executableName: watchy
   signAndEditExecutable: false
   target:
-    - portable
-portable:
-  artifactName: ${name}-${version}-win-x64.${ext}
+    - nsis
+nsis:
+  oneClick: true
+  allowToChangeInstallationDirectory: false
+  createDesktopShortcut: false
+  createStartMenuShortcut: true
+  shortcutName: Watchy
+  artifactName: ${name}-${version}-setup.${ext}
 mac:
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
@@ -29,15 +34,6 @@ mac:
     - dmg
 dmg:
   artifactName: ${name}-${version}-mac.${ext}
-linux:
-  target:
-    - AppImage
-    - snap
-    - deb
-  maintainer: electronjs.org
-  category: Utility
-appImage:
-  artifactName: ${name}-${version}.${ext}
 npmRebuild: false
 buildDependenciesFromSource: false
 publish:
