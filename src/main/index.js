@@ -1,7 +1,11 @@
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import icon from '../../resources/icon.png?asset'
+import iconPng from '../../resources/icon.png?asset'
+import iconIco from '../../resources/icon.ico?asset'
+
+// Use .ico on Windows for proper taskbar icon support
+const icon = process.platform === 'win32' ? iconIco : iconPng
 import allDebrid from './services/allDebrid'
 import scraper from './services/scraper'
 import vlc from './services/vlc'

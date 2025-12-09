@@ -30,7 +30,7 @@ def release_to_github(version: str):
         return
 
     tag = f"v{version}"
-    release_dir = 'release'
+    release_dir = os.path.join('dist', 'release')
 
     if not os.path.isdir(release_dir):
         print(f"No '{release_dir}' directory found, nothing to release.")
@@ -106,9 +106,9 @@ def build():
         build_macos()
 
 def clean_dist_folder():
-    """Always start from a clean dist/ and release/ tree before building."""
+    """Always start from a clean dist/ tree before building."""
 
-    # Clean dist/
+    # Clean dist/ (this also cleans dist/release)
     if os.path.exists('dist'):
         shutil.rmtree('dist')
         print("dist/ folder removed.")
@@ -117,28 +117,19 @@ def clean_dist_folder():
     os.makedirs('dist', exist_ok=True)
     print("dist/ folder created.")
 
-    # Clean release/
-    if os.path.exists('release'):
-        shutil.rmtree('release')
-        print("release/ folder removed.")
-    else:
-        print("release/ folder does not exist, nothing to clean.")
-    os.makedirs('release', exist_ok=True)
-    print("release/ folder created.")
-
 def build_macos():
     print("Building for macOS...")
     os.system('npm run build:mac')
 
-    # Ensure release/ exists
-    os.makedirs('release', exist_ok=True)
+    release_dir = os.path.join('dist', 'release')
+    os.makedirs(release_dir, exist_ok=True)
 
-    # copy the built .dmg to release/
+    # copy the built .dmg to dist/release/
     dist_files = os.listdir('dist')
     for file in dist_files:
         if file.endswith('.dmg'):
-            shutil.copy(os.path.join('dist', file), 'release/')
-            print(f"Copied {file} to release/")
+            shutil.copy(os.path.join('dist', file), release_dir)
+            print(f"Copied {file} to {release_dir}/")
 
 
 
@@ -148,16 +139,15 @@ def build_windows():
     print("Building for Windows...")
     os.system('npm run build:win')
 
+    release_dir = os.path.join('dist', 'release')
+    os.makedirs(release_dir, exist_ok=True)
 
-    # Ensure release/ exists
-    os.makedirs('release', exist_ok=True)
-
-    # copy the built .exe to release/
+    # copy the built .exe to dist/release/
     dist_files = os.listdir('dist')
     for file in dist_files:
         if file.endswith('.exe'):
-            shutil.copy(os.path.join('dist', file), 'release/')
-            print(f"Copied {file} to release/")
+            shutil.copy(os.path.join('dist', file), release_dir)
+            print(f"Copied {file} to {release_dir}/")
 
 if __name__ == "__main__":
     main()
