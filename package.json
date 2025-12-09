@@ -1,6 +1,6 @@
 {
   "name": "watchy",
-  "version": "0.0.10",
+  "version": "0.0.12",
   "description": "An Electron application with React",
   "main": "./out/main/index.js",
   "author": "jwd.me",
@@ -15,8 +15,7 @@
     "build:unpack": "npm run build && electron-builder --dir",
     "build:win": "npm run build && electron-builder --win",
     "build:mac": "npm run build && electron-builder --mac",
-    "build:linux": "npm run build && electron-builder --linux",
-    "icon:generate": "node convert-icon.js"
+    "build:linux": "npm run build && electron-builder --linux"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",

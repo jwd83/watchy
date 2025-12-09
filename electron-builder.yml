@@ -12,7 +12,6 @@ asarUnpack:
   - resources/**
 win:
   executableName: watchy
-  icon: build/icon.ico
   signAndEditExecutable: false
   target:
     - portable

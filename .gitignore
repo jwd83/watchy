@@ -5,9 +5,9 @@ node_modules
 dist
 dist-ssr
 out
-build
 release
 *.local
+build/entitlements.mac.plist
 
 # Editor directories and files
 .vscode/*
