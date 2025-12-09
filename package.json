@@ -1,6 +1,6 @@
 {
   "name": "watchy",
-  "version": "0.0.18",
+  "version": "0.0.19",
   "description": "An Electron application with React",
   "main": "./out/main/index.js",
   "author": "jwd.me",
