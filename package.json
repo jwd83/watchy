@@ -1,9 +1,9 @@
 {
   "name": "watchy",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "An Electron application with React",
   "main": "./out/main/index.js",
-  "author": "example.com",
+  "author": "jwd.me",
   "homepage": "https://electron-vite.org",
   "scripts": {
     "format": "prettier --write .",

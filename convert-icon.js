@@ -4,7 +4,8 @@
 const path = require('path')
 const fs = require('fs')
 const sharp = require('sharp')
-const pngToIco = require('png-to-ico')
+const pngToIcoModule = require('png-to-ico')
+const pngToIco = pngToIcoModule.default || pngToIcoModule
 const png2icons = require('png2icons')
 
 const sourcePng = path.resolve(__dirname, 'resources/icon.png')
@@ -68,7 +69,7 @@ async function main() {
   console.log('All icons generated successfully!')
   console.log('Generated:')
   console.log(`  - ${basePngPath} (256x256)`)
-  console.log(`  - ${path.join(buildDir, 'icon.ico')} (Windows, multi-size)`)\
+  console.log(`  - ${path.join(buildDir, 'icon.ico')} (Windows, multi-size)`)
   console.log(`  - ${path.join(buildDir, 'icon.icns')} (macOS, multi-size)`)
 }
 
