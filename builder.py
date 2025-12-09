@@ -4,7 +4,7 @@ import json
 import subprocess
 
 def main():
-    # clean dist/ folder?
+    # always start from a clean dist/ and release/ folder
     clean_dist_folder()
 
     # change version?
@@ -96,6 +96,8 @@ def change_version():
 
 
 def build():
+    # Ensure platform icons are generated before any OS-specific packaging
+    os.system('npm run icon:generate')
 
     if os.name == 'nt':
         build_windows()
@@ -104,14 +106,25 @@ def build():
         build_macos()
 
 def clean_dist_folder():
-    if input("Clean dist/ folder? (y/n): ").lower() == 'y':
-        if os.path.exists('dist'):
-            shutil.rmtree('dist')
-            print("dist/ folder cleaned.")
-        else:
-            print("dist/ folder does not exist, nothing to clean.")
-        os.makedirs('dist')
-        print("dist/ folder created.")
+    """Always start from a clean dist/ and release/ tree before building."""
+
+    # Clean dist/
+    if os.path.exists('dist'):
+        shutil.rmtree('dist')
+        print("dist/ folder removed.")
+    else:
+        print("dist/ folder does not exist, nothing to clean.")
+    os.makedirs('dist', exist_ok=True)
+    print("dist/ folder created.")
+
+    # Clean release/
+    if os.path.exists('release'):
+        shutil.rmtree('release')
+        print("release/ folder removed.")
+    else:
+        print("release/ folder does not exist, nothing to clean.")
+    os.makedirs('release', exist_ok=True)
+    print("release/ folder created.")
 
 def build_macos():
     print("Building for macOS...")
