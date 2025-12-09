@@ -20,6 +20,7 @@ function App() {
   const [history, setHistory] = useState([])
   const [toast, setToast] = useState(null)
   const [currentMagnet, setCurrentMagnet] = useState(null) // { hash, title }
+  const [isNavStuck, setIsNavStuck] = useState(false)
 
   useEffect(() => {
     window.api.getKey().then((key) => {
@@ -29,6 +30,15 @@ function App() {
     })
     loadLibrary()
     loadHistory()
+  }, [])
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsNavStuck(window.scrollY > 0)
+    }
+
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
   const loadLibrary = async () => {
@@ -238,10 +248,14 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-8">
-      <div className="max-w-4xl mx-auto">
-        {/* Sticky top navigation for easy access while scrolling */}
-        <div className="flex justify-between items-center mb-8 sticky top-0 z-20 bg-background pb-4">
+    <div className="min-h-screen bg-background">
+      {/* Full-width sticky top navigation */}
+      <div
+        className={`sticky top-0 z-20 border-b border-slate-800 ${
+          isNavStuck ? 'bg-slate-950 shadow-lg' : 'bg-background'
+        }`}
+      >
+        <div className="max-w-4xl mx-auto px-8 pb-4 pt-2 flex justify-between items-center">
           <h1 className="text-4xl font-black bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
             Watchy
           </h1>
@@ -323,7 +337,9 @@ function App() {
             </button>
           </div>
         </div>
+      </div>
 
+      <div className="max-w-4xl mx-auto px-8 pt-8">
         {view === 'history' ? (
           <History
             history={history}
