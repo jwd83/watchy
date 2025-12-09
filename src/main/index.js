@@ -1,24 +1,24 @@
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import iconPng from '../../resources/icon.png?asset'
-import iconIco from '../../resources/icon.ico?asset'
-
-// Use .ico on Windows for proper taskbar icon support
-const icon = process.platform === 'win32' ? iconIco : iconPng
 import allDebrid from './services/allDebrid'
 import scraper from './services/scraper'
 import vlc from './services/vlc'
 import library from './services/library'
 
 function createWindow() {
+  // Icon path - dev uses build folder, prod uses extraResources
+  const iconPath = is.dev
+    ? join(__dirname, '../../build/icon.ico')
+    : join(process.resourcesPath, 'icon.ico')
+  
   // Create the browser window.
   const mainWindow = new BrowserWindow({
     width: 900,
     height: 670,
     show: false,
     autoHideMenuBar: true,
-    icon: icon,
+    icon: iconPath,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false
@@ -26,6 +26,18 @@ function createWindow() {
   })
 
   mainWindow.on('ready-to-show', () => {
+    mainWindow.setTitle(`Watchy v${app.getVersion()}`)
+    
+    // Set taskbar properties for Windows 11
+    if (process.platform === 'win32') {
+      mainWindow.setAppDetails({
+        appId: 'com.watchy.app',
+        appIconPath: iconPath,
+        appIconIndex: 0,
+        relaunchDisplayName: 'Watchy'
+      })
+    }
+    
     mainWindow.show()
   })
 
