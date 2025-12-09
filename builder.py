@@ -96,9 +96,6 @@ def change_version():
 
 
 def build():
-    # Ensure platform icons are generated before any OS-specific packaging
-    os.system('npm run icon:generate')
-
     if os.name == 'nt':
         build_windows()
 
