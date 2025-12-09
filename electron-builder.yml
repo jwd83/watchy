@@ -29,7 +29,7 @@ mac:
   target:
     - dmg
 dmg:
-  artifactName: ${name}-${version}.${ext}
+  artifactName: ${name}-${version}-mac.${ext}
 linux:
   target:
     - AppImage
