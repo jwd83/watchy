@@ -49,3 +49,8 @@ To build the application for your mac or windows:
 -   **VLC not opening?** Ensure VLC is installed in the default system location.
 -   **No search results?** The scraper may be blocked by your ISP or the source site might be down.
 -   **Unlock failed?** Verify your AllDebrid API key and subscription status. If the file is not cached you may just need to try again later. You can view the AllDebrid cache download status in your account page on AllDebrid.
+-  **macOS Damaged Error?** Try running...
+
+`sudo xattr -cr /Applications/watchy.app`
+
+...or adjust to wherever you have watchy installed.
