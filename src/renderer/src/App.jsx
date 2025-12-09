@@ -240,7 +240,8 @@ function App() {
   return (
     <div className="min-h-screen bg-background p-8">
       <div className="max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
+        {/* Sticky top navigation for easy access while scrolling */}
+        <div className="flex justify-between items-center mb-8 sticky top-0 z-20 bg-background pb-4">
           <h1 className="text-4xl font-black bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
             Watchy
           </h1>
