@@ -1,6 +1,7 @@
 import shutil
 import os
 import json
+import subprocess
 
 def main():
     # clean dist/ folder?
@@ -12,12 +13,69 @@ def main():
     # perform build
     build()
 
-    release_to_github()
+    release_to_github(ver)
     
     
-def release_to_github():
-    release = input("Release to GitHub? (y/n): ").lower()
-    
+def release_to_github(version: str):
+    """Create or update a GitHub release for the given version using the gh CLI.
+
+    Behaviour:
+    - If a release with tag v<version> exists, upload assets with --clobber
+    - If it does not exist, create a new release with those assets
+    - Only upload artifacts that match this version from the local release/ folder
+    """
+    release = input("Release to GitHub? (y/n): ").strip().lower()
+    if release != 'y':
+        print("Skipping GitHub release.")
+        return
+
+    tag = f"v{version}"
+    release_dir = 'release'
+
+    if not os.path.isdir(release_dir):
+        print(f"No '{release_dir}' directory found, nothing to release.")
+        return
+
+    # Only pick artifacts that contain the version in their filename so we
+    # don't accidentally push artifacts from other versions.
+    artifacts = []
+    for fname in os.listdir(release_dir):
+        full_path = os.path.join(release_dir, fname)
+        if os.path.isfile(full_path) and version in fname:
+            artifacts.append(full_path)
+
+    if not artifacts:
+        print(f"No artifacts in '{release_dir}' for version {version}, aborting release.")
+        return
+
+    print(f"Preparing to publish {len(artifacts)} artifact(s) for tag {tag}:")
+    for a in artifacts:
+        print(f"  - {a}")
+
+    # Check whether the release already exists.
+    print(f"Checking if GitHub release {tag} exists...")
+    view_result = subprocess.run([
+        'gh', 'release', 'view', tag
+    ])
+
+    if view_result.returncode == 0:
+        # Release exists: upload and clobber matching assets.
+        print(f"Release {tag} exists. Uploading assets with --clobber...")
+        cmd = ['gh', 'release', 'upload', tag, '--clobber', *artifacts]
+    else:
+        # Release does not exist: create it with these assets.
+        print(f"Release {tag} does not exist. Creating new release...")
+        title = f"watchy {version}"
+        notes = f"Automated release for version {version}."
+        cmd = ['gh', 'release', 'create', tag, *artifacts,
+               '--title', title,
+               '--notes', notes]
+
+    result = subprocess.run(cmd)
+    if result.returncode == 0:
+        print(f"GitHub release {tag} published successfully.")
+    else:
+        print(f"Failed to publish GitHub release {tag}. gh exited with {result.returncode}.")
 
 def change_version():
     # display current version in package.json
@@ -59,6 +117,9 @@ def clean_dist_folder():
 def build_macos():
     print("Building for macOS...")
     os.system('npm run build:mac')
+
+    # Ensure release/ exists
+    os.makedirs('release', exist_ok=True)
 
     # copy the built .dmg to release/
     dist_files = os.listdir('dist')

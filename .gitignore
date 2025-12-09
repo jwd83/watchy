@@ -6,6 +6,7 @@ dist
 dist-ssr
 out
 build
+release
 *.local
 
 # Editor directories and files
