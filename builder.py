@@ -137,5 +137,15 @@ def build_windows():
     os.system('npm run build:win')
 
 
+    # Ensure release/ exists
+    os.makedirs('release', exist_ok=True)
+
+    # copy the built .exe to release/
+    dist_files = os.listdir('dist')
+    for file in dist_files:
+        if file.endswith('.exe'):
+            shutil.copy(os.path.join('dist', file), 'release/')
+            print(f"Copied {file} to release/")
+
 if __name__ == "__main__":
     main()
