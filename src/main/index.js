@@ -11,10 +11,10 @@ function createWindow() {
   const iconPath = is.dev
     ? join(__dirname, '../../build/icon.ico')
     : join(process.resourcesPath, 'icon.ico')
-  
+
   // Create native image from icon
   const appIcon = nativeImage.createFromPath(iconPath)
-  
+
   // Create the browser window.
   const mainWindow = new BrowserWindow({
     width: 900,
@@ -30,7 +30,7 @@ function createWindow() {
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.setTitle(`Watchy v${app.getVersion()}`)
-    
+
     // Force set icon for Windows taskbar
     if (process.platform === 'win32') {
       mainWindow.setIcon(appIcon)
@@ -48,6 +48,42 @@ function createWindow() {
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
     return { action: 'deny' }
+  })
+
+  // Track downloads
+  mainWindow.webContents.session.on('will-download', (event, item) => {
+    // Set save path if needed, or let user choose (default behavior is user chooses or default dir)
+    // item.setSavePath(...)
+
+    item.on('updated', (event, state) => {
+      if (state === 'interrupted') {
+        console.log('Download is interrupted but can be resumed')
+      } else if (state === 'progressing') {
+        if (item.isPaused()) {
+          console.log('Download is paused')
+        } else {
+          // Send progress to renderer
+          mainWindow.webContents.send('download:progress', {
+            filename: item.getFilename(),
+            receivedBytes: item.getReceivedBytes(),
+            totalBytes: item.getTotalBytes(),
+            state: 'progressing'
+          })
+        }
+      }
+    })
+
+    item.once('done', (event, state) => {
+      if (state === 'completed') {
+        console.log('Download successfully')
+      } else {
+        console.log(`Download failed: ${state}`)
+      }
+      mainWindow.webContents.send('download:progress', {
+        filename: item.getFilename(),
+        state: state === 'completed' ? 'completed' : 'failed'
+      })
+    })
   })
 
   // HMR for renderer base on electron-vite cli.
@@ -96,6 +132,10 @@ app.whenReady().then(() => {
 
   ipcMain.handle('api:play', (_, url) => {
     vlc.play(url)
+  })
+
+  ipcMain.handle('api:download', (event, url) => {
+    event.sender.downloadURL(url)
   })
 
   ipcMain.handle('api:saveKey', async (_, key) => {

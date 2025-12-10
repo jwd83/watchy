@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import SearchBar from './components/SearchBar'
 import ResultCard from './components/ResultCard'
 import FileUserInterface from './components/FileUserInterface'
@@ -6,6 +6,7 @@ import SettingsModal from './components/SettingsModal'
 import Library from './components/Library'
 import History from './components/History'
 import Toast from './components/Toast'
+import DownloadManager from './components/DownloadManager'
 
 function App() {
   const [results, setResults] = useState([])
@@ -21,6 +22,7 @@ function App() {
   const [toast, setToast] = useState(null)
   const [currentMagnet, setCurrentMagnet] = useState(null) // { hash, title }
   const [isNavStuck, setIsNavStuck] = useState(false)
+  const [activeDownloads, setActiveDownloads] = useState([])
 
   useEffect(() => {
     window.api.getKey().then((key) => {
@@ -30,6 +32,30 @@ function App() {
     })
     loadLibrary()
     loadHistory()
+
+    const removeListener = window.api.onDownloadProgress((data) => {
+      setActiveDownloads((prev) => {
+        const index = prev.findIndex((d) => d.filename === data.filename)
+        if (index === -1) {
+          // New download
+          return [...prev, data]
+        } else {
+          // Update existing
+          const newDownloads = [...prev]
+          newDownloads[index] = { ...newDownloads[index], ...data }
+
+          // Optionally remove completed/failed after some time?
+          // For now let's keep them visible until manual dismissal or page refresh? 
+          // The DownloadManager doesn't have dismissal yet.
+          // Let's just keep them.
+          return newDownloads
+        }
+      })
+    })
+
+    return () => {
+      removeListener()
+    }
   }, [])
 
   useEffect(() => {
@@ -251,9 +277,8 @@ function App() {
     <div className="min-h-screen bg-background">
       {/* Full-width sticky top navigation */}
       <div
-        className={`sticky top-0 z-20 border-b border-slate-800 ${
-          isNavStuck ? 'bg-slate-950 shadow-lg' : 'bg-background'
-        }`}
+        className={`sticky top-0 z-20 border-b border-slate-800 ${isNavStuck ? 'bg-slate-950 shadow-lg' : 'bg-background'
+          }`}
       >
         <div className="max-w-4xl mx-auto px-8 pb-4 pt-2 flex justify-between items-center">
           <h1 className="text-4xl font-black bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
@@ -262,21 +287,19 @@ function App() {
           <div className="flex gap-4 items-center">
             <button
               onClick={() => setView('search')}
-              className={`px-4 py-2 rounded-lg transition-colors ${
-                view === 'search'
-                  ? 'bg-primary text-white'
-                  : 'text-gray-400 hover:text-white hover:bg-surface'
-              }`}
+              className={`px-4 py-2 rounded-lg transition-colors ${view === 'search'
+                ? 'bg-primary text-white'
+                : 'text-gray-400 hover:text-white hover:bg-surface'
+                }`}
             >
               Search
             </button>
             <button
               onClick={() => setView('library')}
-              className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
-                view === 'library'
-                  ? 'bg-primary text-white'
-                  : 'text-gray-400 hover:text-white hover:bg-surface'
-              }`}
+              className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${view === 'library'
+                ? 'bg-primary text-white'
+                : 'text-gray-400 hover:text-white hover:bg-surface'
+                }`}
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -290,11 +313,10 @@ function App() {
             </button>
             <button
               onClick={() => setView('history')}
-              className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
-                view === 'history'
-                  ? 'bg-primary text-white'
-                  : 'text-gray-400 hover:text-white hover:bg-surface'
-              }`}
+              className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${view === 'history'
+                ? 'bg-primary text-white'
+                : 'text-gray-400 hover:text-white hover:bg-surface'
+                }`}
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -388,8 +410,8 @@ function App() {
                   watchedFiles={
                     currentMagnet
                       ? history
-                          .find((h) => h.magnetHash === currentMagnet.hash)
-                          ?.files.map((f) => f.filename) || []
+                        .find((h) => h.magnetHash === currentMagnet.hash)
+                        ?.files.map((f) => f.filename) || []
                       : []
                   }
                 />
@@ -418,6 +440,8 @@ function App() {
         {toast && (
           <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
         )}
+
+        <DownloadManager downloads={activeDownloads} />
       </div>
     </div>
   )

@@ -1,4 +1,3 @@
-import React from 'react'
 
 const FileUserInterface = ({ files, onPlay, watchedFiles = [] }) => {
   // Filter for video files
@@ -48,6 +47,27 @@ const FileUserInterface = ({ files, onPlay, watchedFiles = [] }) => {
                   className="px-4 py-2 bg-accent hover:bg-violet-600 text-white rounded-lg text-sm font-medium transition-colors"
                 >
                   Play in VLC
+                </button>
+                <button
+                  onClick={() => window.api.download(file.link)}
+                  className="px-4 py-2 bg-surface hover:bg-gray-700 text-white rounded-lg text-sm font-medium transition-colors border border-gray-600 flex items-center gap-2"
+                  title="Download File"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                    />
+                  </svg>
+                  Download
                 </button>
               </div>
             )

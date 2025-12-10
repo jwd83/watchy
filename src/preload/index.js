@@ -8,6 +8,7 @@ const api = {
   getStatus: (id) => ipcRenderer.invoke('api:getStatus', id),
   getFiles: (link) => ipcRenderer.invoke('api:getFiles', link),
   play: (url) => ipcRenderer.invoke('api:play', url),
+  download: (url) => ipcRenderer.invoke('api:download', url),
   saveKey: (key) => ipcRenderer.invoke('api:saveKey', key),
   getKey: () => ipcRenderer.invoke('api:getKey'),
   // Library APIs
@@ -24,7 +25,12 @@ const api = {
   removeHistoryEntry: (id) => ipcRenderer.invoke('api:removeHistoryEntry', id),
   removeAllHistory: () => ipcRenderer.invoke('api:removeAllHistory'),
   resetFileWatched: (historyId, filename) =>
-    ipcRenderer.invoke('api:resetFileWatched', historyId, filename)
+    ipcRenderer.invoke('api:resetFileWatched', historyId, filename),
+  onDownloadProgress: (callback) => {
+    const subscription = (event, data) => callback(data)
+    ipcRenderer.on('download:progress', subscription)
+    return () => ipcRenderer.removeListener('download:progress', subscription)
+  }
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to
