@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import SearchBar from './components/SearchBar'
 import ResultCard from './components/ResultCard'
 import FileUserInterface from './components/FileUserInterface'
@@ -7,13 +7,14 @@ import Library from './components/Library'
 import History from './components/History'
 import Toast from './components/Toast'
 import DownloadManager from './components/DownloadManager'
+import StatusModal from './components/StatusModal'
 
 function App() {
   const [results, setResults] = useState([])
   const [files, setFiles] = useState([])
   const [isLoading, setIsLoading] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
-  const [statusMessage, setStatusMessage] = useState('')
+  const [statusModal, setStatusModal] = useState(null) // { message, type: 'loading' | 'success' | 'error' }
   const [currentQuery, setCurrentQuery] = useState('')
   const [view, setView] = useState('search') // 'search', 'library', or 'history'
   const [savedSearches, setSavedSearches] = useState([])
@@ -45,7 +46,7 @@ function App() {
           newDownloads[index] = { ...newDownloads[index], ...data }
 
           // Optionally remove completed/failed after some time?
-          // For now let's keep them visible until manual dismissal or page refresh? 
+          // For now let's keep them visible until manual dismissal or page refresh?
           // The DownloadManager doesn't have dismissal yet.
           // Let's just keep them.
           return newDownloads
@@ -83,24 +84,28 @@ function App() {
     setToast({ message, type })
   }
 
+  const clearStatusModal = useCallback(() => {
+    setStatusModal(null)
+  }, [])
+
   const handleSearch = async (query) => {
     setIsLoading(true)
     setResults([])
     setFiles([])
     setCurrentQuery(query)
     setView('search')
-    setStatusMessage('Searching P2P networks...')
+    setStatusModal({ message: 'Searching P2P networks...', type: 'loading' })
     try {
       const searchResults = await window.api.search(query)
       setResults(searchResults)
       if (searchResults.length === 0) {
-        setStatusMessage('No results found.')
+        setStatusModal({ message: 'No results found.', type: 'error' })
       } else {
-        setStatusMessage('')
+        setStatusModal(null)
       }
     } catch (error) {
       console.error(error)
-      setStatusMessage('Error searching.')
+      setStatusModal({ message: 'Error searching.', type: 'error' })
     } finally {
       setIsLoading(false)
     }
@@ -148,7 +153,7 @@ function App() {
   const handleSelectResult = async (result) => {
     setIsLoading(true)
     setView('search') // Switch to search view to show files
-    setStatusMessage(`Unlocking "${result.title}"...`)
+    setStatusModal({ message: `Unlocking "${result.title}"...`, type: 'loading' })
 
     // Store current magnet context for history tracking
     setCurrentMagnet({
@@ -205,20 +210,21 @@ function App() {
                 }
               }
               setFiles(unlockedFiles)
-              setStatusMessage('Ready to play.')
+              setStatusModal({ message: 'Ready to play!', type: 'success' })
             }
           } else {
-            setStatusMessage(
-              `Torrent is processing (Status: ${magnetStatus.status}). Please try again in a moment.`
-            )
+            setStatusModal({
+              message: `Torrent is processing (Status: ${magnetStatus.status}). Please try again in a moment.`,
+              type: 'error'
+            })
           }
         }
       } else {
-        setStatusMessage('Failed to upload magnet.')
+        setStatusModal({ message: 'Failed to upload magnet.', type: 'error' })
       }
     } catch (error) {
       console.error(error)
-      setStatusMessage('Error unlocking torrent. Check API Key.')
+      setStatusModal({ message: 'Error unlocking torrent. Check API Key.', type: 'error' })
     } finally {
       setIsLoading(false)
     }
@@ -277,8 +283,9 @@ function App() {
     <div className="min-h-screen bg-background">
       {/* Full-width sticky top navigation */}
       <div
-        className={`sticky top-0 z-20 border-b border-slate-800 ${isNavStuck ? 'bg-slate-950 shadow-lg' : 'bg-background'
-          }`}
+        className={`sticky top-0 z-20 border-b border-slate-800 ${
+          isNavStuck ? 'bg-slate-950 shadow-lg' : 'bg-background'
+        }`}
       >
         <div className="max-w-7xl mx-auto px-8 pb-4 pt-2 flex justify-between items-center">
           <h1 className="text-4xl font-black bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
@@ -287,19 +294,21 @@ function App() {
           <div className="flex gap-4 items-center">
             <button
               onClick={() => setView('search')}
-              className={`px-4 py-2 rounded-lg transition-colors ${view === 'search'
-                ? 'bg-primary text-white'
-                : 'text-gray-400 hover:text-white hover:bg-surface'
-                }`}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                view === 'search'
+                  ? 'bg-primary text-white'
+                  : 'text-gray-400 hover:text-white hover:bg-surface'
+              }`}
             >
               Search
             </button>
             <button
               onClick={() => setView('library')}
-              className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${view === 'library'
-                ? 'bg-primary text-white'
-                : 'text-gray-400 hover:text-white hover:bg-surface'
-                }`}
+              className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+                view === 'library'
+                  ? 'bg-primary text-white'
+                  : 'text-gray-400 hover:text-white hover:bg-surface'
+              }`}
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -313,10 +322,11 @@ function App() {
             </button>
             <button
               onClick={() => setView('history')}
-              className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${view === 'history'
-                ? 'bg-primary text-white'
-                : 'text-gray-400 hover:text-white hover:bg-surface'
-                }`}
+              className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+                view === 'history'
+                  ? 'bg-primary text-white'
+                  : 'text-gray-400 hover:text-white hover:bg-surface'
+              }`}
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -389,16 +399,12 @@ function App() {
               currentQuery={currentQuery}
             />
 
-            {statusMessage && (
-              <div className="text-center text-gray-400 mb-8 animate-pulse">{statusMessage}</div>
-            )}
-
             {files.length > 0 ? (
               <div>
                 <button
                   onClick={() => {
                     setFiles([])
-                    setStatusMessage('')
+                    setStatusModal(null)
                   }}
                   className="mb-4 text-sm text-gray-400 hover:text-white flex items-center gap-2"
                 >
@@ -410,8 +416,8 @@ function App() {
                   watchedFiles={
                     currentMagnet
                       ? history
-                        .find((h) => h.magnetHash === currentMagnet.hash)
-                        ?.files.map((f) => f.filename) || []
+                          .find((h) => h.magnetHash === currentMagnet.hash)
+                          ?.files.map((f) => f.filename) || []
                       : []
                   }
                 />
@@ -441,6 +447,7 @@ function App() {
           <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
         )}
 
+        <StatusModal status={statusModal} onClose={clearStatusModal} />
         <DownloadManager downloads={activeDownloads} />
       </div>
     </div>

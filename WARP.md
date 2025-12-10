@@ -9,12 +9,14 @@ Watchy is an Electron desktop application for searching P2P content, caching it 
 ## Common Commands
 
 ### Development
+
 ```bash
 npm run dev              # Start in development mode with hot reload
 npm start                # Preview built app
 ```
 
 ### Building
+
 ```bash
 npm run build            # Build for all platforms
 npm run build:mac        # Build for macOS
@@ -24,12 +26,14 @@ npm run build:unpack     # Build without packaging (faster for testing)
 ```
 
 ### Code Quality
+
 ```bash
 npm run lint             # Run ESLint
 npm run format           # Format code with Prettier
 ```
 
 ### Icons
+
 ```bash
 npm run icon:generate    # Generate icons from source (uses convert-icon.js)
 ```
@@ -39,16 +43,19 @@ npm run icon:generate    # Generate icons from source (uses convert-icon.js)
 ### Electron Process Structure
 
 **Main Process** (`src/main/index.js`)
+
 - Manages the browser window lifecycle
 - Registers IPC handlers for renderer communication
 - Coordinates between services (AllDebrid, scraper, VLC, library)
 
 **Preload Script** (`src/preload/index.js`)
+
 - Exposes safe IPC communication bridge between renderer and main
 - All API methods are prefixed with `api:` in IPC channel names
 - Uses `contextBridge` for security
 
 **Renderer Process** (`src/renderer/src/App.jsx`)
+
 - React-based UI with Tailwind CSS styling
 - Manages application state (search results, file lists, library items)
 - Two main views: Search and Library
@@ -58,22 +65,26 @@ npm run icon:generate    # Generate icons from source (uses convert-icon.js)
 Services are singleton instances in `src/main/services/`:
 
 **allDebrid.js**
+
 - Handles AllDebrid API communication (magnet upload, status checks, link unlocking)
 - Stores API key in electron-store
 - Base URL: `https://api.alldebrid.com/v4`
 
 **scraper.js**
+
 - Searches P2P networks via Apibay API (`https://apibay.org`)
 - Transforms torrent metadata into magnet links
 - Returns structured results with seeds, leeches, size info
 
 **vlc.js**
+
 - Spawns VLC Media Player with streaming URLs
 - Platform-specific VLC paths:
   - macOS: `/Applications/VLC.app/Contents/MacOS/VLC`
   - Windows: `C:\Program Files\VideoLAN\VLC\vlc.exe`
 
 **library.js**
+
 - Manages saved searches and magnet links using electron-store
 - Prevents duplicate entries
 - Uses ISO timestamps for sorting
@@ -81,6 +92,7 @@ Services are singleton instances in `src/main/services/`:
 ### IPC Communication Pattern
 
 All communication between renderer and main follows this pattern:
+
 1. Renderer calls `window.api.methodName(args)`
 2. Preload script invokes `ipcRenderer.invoke('api:methodName', args)`
 3. Main process handles via `ipcMain.handle('api:methodName', handler)`
@@ -89,6 +101,7 @@ All communication between renderer and main follows this pattern:
 ### State Management
 
 The app uses React hooks for state management in `App.jsx`:
+
 - `results`: Current search results array
 - `files`: Unlocked file list from AllDebrid
 - `isLoading`: Global loading state
@@ -106,6 +119,7 @@ The app uses React hooks for state management in `App.jsx`:
 ### Styling
 
 Tailwind CSS with custom theme in `tailwind.config.js`:
+
 - Background: `#0f172a` (slate-900)
 - Surface: `#1e293b` (slate-800)
 - Primary: `#3b82f6` (blue-500)
@@ -122,17 +136,21 @@ Tailwind CSS with custom theme in `tailwind.config.js`:
 ## Development Notes
 
 ### Adding New API Endpoints
+
 1. Add service method in appropriate `src/main/services/*.js` file
 2. Register IPC handler in `src/main/index.js` using `ipcMain.handle('api:methodName', ...)`
 3. Expose method in `src/preload/index.js` via the `api` object
 4. Call from renderer using `window.api.methodName()`
 
 ### Data Persistence
+
 All user data (API keys, saved searches, saved magnets) is stored via `electron-store`, which persists to:
+
 - macOS: `~/Library/Application Support/watchy/`
 - Windows: `%APPDATA%\watchy\`
 - Linux: `~/.config/watchy/`
 
 ### External Dependencies
+
 - **AllDebrid API Key**: Required for torrent caching/streaming functionality
 - **VLC Media Player**: Must be installed at default system location

@@ -1,6 +1,13 @@
 import React from 'react'
 
-const History = ({ history, onRemoveEntry, onRemoveAll, onResetFile, onPlayFile, onViewMagnet }) => {
+const History = ({
+  history,
+  onRemoveEntry,
+  onRemoveAll,
+  onResetFile,
+  onPlayFile,
+  onViewMagnet
+}) => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
