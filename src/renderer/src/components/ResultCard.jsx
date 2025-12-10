@@ -2,7 +2,7 @@ import React from 'react'
 
 const ResultCard = ({ result, onSelect, onSave }) => {
   return (
-    <div className="bg-surface p-4 rounded-xl border border-gray-700 hover:border-primary transition-all hover:shadow-xl group">
+    <div className="bg-surface p-4 rounded-xl border border-gray-700 hover:border-primary hover:bg-gray-700/50 transition-all hover:shadow-xl group">
       <div className="flex items-start gap-4">
         <button onClick={() => onSelect(result)} className="flex-1 min-w-0 text-left">
           <h3 className="text-lg font-semibold mb-2 group-hover:text-primary" title={result.title}>
