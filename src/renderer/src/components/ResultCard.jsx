@@ -3,10 +3,10 @@ import React from 'react'
 const ResultCard = ({ result, onSelect, onSave }) => {
   return (
     <div className="bg-surface p-4 rounded-xl border border-gray-700 hover:border-primary transition-all hover:shadow-xl group">
-      <div className="flex justify-between items-start">
-        <button onClick={() => onSelect(result)} className="flex-1 text-left">
+      <div className="flex items-start gap-4">
+        <button onClick={() => onSelect(result)} className="flex-1 min-w-0 text-left">
           <h3
-            className="text-lg font-semibold mb-2 group-hover:text-primary truncate"
+            className="text-lg font-semibold mb-2 group-hover:text-primary"
             title={result.title}
           >
             {result.title}
@@ -24,7 +24,7 @@ const ResultCard = ({ result, onSelect, onSave }) => {
             e.stopPropagation()
             onSave(result)
           }}
-          className="ml-4 p-2 text-gray-400 hover:text-primary transition-colors"
+          className="flex-shrink-0 p-2 text-gray-400 hover:text-primary transition-colors"
           title="Save to library"
         >
           <svg

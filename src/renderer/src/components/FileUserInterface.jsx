@@ -53,9 +53,9 @@ const FileUserInterface = ({ files, onPlay, watchedFiles = [] }) => {
             return (
               <div
                 key={index}
-                className="flex items-center justify-between p-3 bg-background rounded-lg hover:bg-gray-800 transition-colors"
+                className="flex items-center gap-3 p-3 bg-background rounded-lg hover:bg-gray-800 transition-colors"
               >
-                <div className="flex items-center gap-3 flex-1 min-w-0 mr-4">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
                   {watched && (
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -75,16 +75,16 @@ const FileUserInterface = ({ files, onPlay, watchedFiles = [] }) => {
                     {file.filename}
                   </span>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-shrink-0">
                   <button
                     onClick={() => onPlay(file.link, file.filename)}
-                    className="px-4 py-2 bg-accent hover:bg-violet-600 text-white rounded-lg text-sm font-medium transition-colors"
+                    className="px-4 py-2 bg-accent hover:bg-violet-600 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
                   >
                     Play in VLC
                   </button>
                   <button
                     onClick={() => window.api.download(file.link)}
-                    className="px-4 py-2 bg-surface hover:bg-gray-700 text-white rounded-lg text-sm font-medium transition-colors border border-gray-600 flex items-center gap-2"
+                    className="px-4 py-2 bg-surface hover:bg-gray-700 text-white rounded-lg text-sm font-medium transition-colors border border-gray-600 flex items-center gap-2 whitespace-nowrap"
                     title="Download File"
                   >
                   <svg

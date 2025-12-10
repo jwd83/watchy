@@ -280,7 +280,7 @@ function App() {
         className={`sticky top-0 z-20 border-b border-slate-800 ${isNavStuck ? 'bg-slate-950 shadow-lg' : 'bg-background'
           }`}
       >
-        <div className="max-w-4xl mx-auto px-8 pb-4 pt-2 flex justify-between items-center">
+        <div className="max-w-7xl mx-auto px-8 pb-4 pt-2 flex justify-between items-center">
           <h1 className="text-4xl font-black bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
             Watchy
           </h1>
@@ -361,7 +361,7 @@ function App() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-8 pt-8">
+      <div className="max-w-7xl mx-auto px-8 pt-8">
         {view === 'history' ? (
           <History
             history={history}
