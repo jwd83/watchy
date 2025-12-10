@@ -1,9 +1,16 @@
 const FileUserInterface = ({ files, onPlay, watchedFiles = [] }) => {
-  // Filter for video files
-  const videoFiles = files.filter((f) => {
-    const ext = f.filename.split('.').pop().toLowerCase()
-    return ['mp4', 'mkv', 'avi', 'mov', 'wmv'].includes(ext)
-  })
+  // Natural sort comparator for filenames with episode numbers
+  const naturalSort = (a, b) => {
+    return a.filename.localeCompare(b.filename, undefined, { numeric: true, sensitivity: 'base' })
+  }
+
+  // Filter for video files and sort naturally
+  const videoFiles = files
+    .filter((f) => {
+      const ext = f.filename.split('.').pop().toLowerCase()
+      return ['mp4', 'mkv', 'avi', 'mov', 'wmv'].includes(ext)
+    })
+    .sort(naturalSort)
 
   const isWatched = (filename) => watchedFiles.includes(filename)
 
