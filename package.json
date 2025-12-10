@@ -1,7 +1,7 @@
 {
   "name": "watchy",
-  "version": "0.0.21",
-  "description": "An Electron application with React",
+  "version": "0.0.22",
+  "description": "Search P2P content, cache via AllDebrid, and stream to VLC",
   "main": "./out/main/index.js",
   "author": "jwd.me",
   "homepage": "https://electron-vite.org",
