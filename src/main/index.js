@@ -1,16 +1,18 @@
-import { app, shell, BrowserWindow, ipcMain, nativeImage } from 'electron'
-import { join } from 'path'
+import { app, shell, BrowserWindow, ipcMain, nativeImage, dialog } from 'electron'
+import path from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import allDebrid from './services/allDebrid'
 import scraper from './services/scraper'
 import vlc from './services/vlc'
 import library from './services/library'
 
+const downloadTargets = new Map()
+
 function createWindow() {
   // Icon path - dev uses build folder, prod uses extraResources
   const iconPath = is.dev
-    ? join(__dirname, '../../build/icon.ico')
-    : join(process.resourcesPath, 'icon.ico')
+    ? path.join(__dirname, '../../build/icon.ico')
+    : path.join(process.resourcesPath, 'icon.ico')
 
   // Create native image from icon
   const appIcon = nativeImage.createFromPath(iconPath)
@@ -23,7 +25,7 @@ function createWindow() {
     autoHideMenuBar: true,
     icon: appIcon,
     webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
+      preload: path.join(__dirname, '../preload/index.js'),
       sandbox: false
     }
   })
@@ -41,7 +43,6 @@ function createWindow() {
         relaunchDisplayName: 'Watchy'
       })
     }
-    
     mainWindow.show()
   })
 
@@ -52,8 +53,14 @@ function createWindow() {
 
   // Track downloads
   mainWindow.webContents.session.on('will-download', (event, item) => {
-    // Set save path if needed, or let user choose (default behavior is user chooses or default dir)
-    // item.setSavePath(...)
+    const url = item.getURL()
+    if (downloadTargets.has(url)) {
+      const directory = downloadTargets.get(url)
+      const filename = item.getFilename()
+      item.setSavePath(path.join(directory, filename))
+      // cleanup
+      downloadTargets.delete(url)
+    }
 
     item.on('updated', (event, state) => {
       if (state === 'interrupted') {
@@ -91,7 +98,7 @@ function createWindow() {
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
-    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
+    mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'))
   }
 }
 
@@ -134,8 +141,18 @@ app.whenReady().then(() => {
     vlc.play(url)
   })
 
-  ipcMain.handle('api:download', (event, url) => {
+  ipcMain.handle('api:download', (event, url, options = {}) => {
+    if (options.directory) {
+      downloadTargets.set(url, options.directory)
+    }
     event.sender.downloadURL(url)
+  })
+
+  ipcMain.handle('api:selectFolder', async () => {
+    const result = await dialog.showOpenDialog({
+      properties: ['openDirectory']
+    })
+    return result.canceled ? null : result.filePaths[0]
   })
 
   ipcMain.handle('api:saveKey', async (_, key) => {

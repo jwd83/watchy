@@ -1,4 +1,3 @@
-
 const FileUserInterface = ({ files, onPlay, watchedFiles = [] }) => {
   // Filter for video files
   const videoFiles = files.filter((f) => {
@@ -15,6 +14,40 @@ const FileUserInterface = ({ files, onPlay, watchedFiles = [] }) => {
         <p className="text-gray-400">No video files found in this torrent.</p>
       ) : (
         <div className="space-y-2">
+          <div className="flex justify-end mb-4">
+            <button
+              onClick={async () => {
+                const folder = await window.api.selectFolder()
+                if (folder) {
+                  // Trigger downloads
+                  files.forEach((file) => {
+                    // Check extension again just in case, though videoFiles is filtered
+                    const ext = file.filename.split('.').pop().toLowerCase()
+                    if (['mp4', 'mkv', 'avi', 'mov', 'wmv'].includes(ext)) {
+                      window.api.download(file.link, { directory: folder })
+                    }
+                  })
+                }
+              }}
+              className="px-4 py-2 bg-primary hover:bg-primary/80 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                />
+              </svg>
+              Download All
+            </button>
+          </div>
           {videoFiles.map((file, index) => {
             const watched = isWatched(file.filename)
             return (

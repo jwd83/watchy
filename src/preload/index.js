@@ -8,7 +8,8 @@ const api = {
   getStatus: (id) => ipcRenderer.invoke('api:getStatus', id),
   getFiles: (link) => ipcRenderer.invoke('api:getFiles', link),
   play: (url) => ipcRenderer.invoke('api:play', url),
-  download: (url) => ipcRenderer.invoke('api:download', url),
+  download: (url, options) => ipcRenderer.invoke('api:download', url, options),
+  selectFolder: () => ipcRenderer.invoke('api:selectFolder'),
   saveKey: (key) => ipcRenderer.invoke('api:saveKey', key),
   getKey: () => ipcRenderer.invoke('api:getKey'),
   // Library APIs
