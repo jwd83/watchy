@@ -75,17 +75,18 @@ const FileUserInterface = ({ files, onPlay, watchedFiles = [] }) => {
                     {file.filename}
                   </span>
                 </div>
-                <button
-                  onClick={() => onPlay(file.link, file.filename)}
-                  className="px-4 py-2 bg-accent hover:bg-violet-600 text-white rounded-lg text-sm font-medium transition-colors"
-                >
-                  Play in VLC
-                </button>
-                <button
-                  onClick={() => window.api.download(file.link)}
-                  className="px-4 py-2 bg-surface hover:bg-gray-700 text-white rounded-lg text-sm font-medium transition-colors border border-gray-600 flex items-center gap-2"
-                  title="Download File"
-                >
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => onPlay(file.link, file.filename)}
+                    className="px-4 py-2 bg-accent hover:bg-violet-600 text-white rounded-lg text-sm font-medium transition-colors"
+                  >
+                    Play in VLC
+                  </button>
+                  <button
+                    onClick={() => window.api.download(file.link)}
+                    className="px-4 py-2 bg-surface hover:bg-gray-700 text-white rounded-lg text-sm font-medium transition-colors border border-gray-600 flex items-center gap-2"
+                    title="Download File"
+                  >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     className="h-4 w-4"
@@ -102,6 +103,7 @@ const FileUserInterface = ({ files, onPlay, watchedFiles = [] }) => {
                   </svg>
                   Download
                 </button>
+                </div>
               </div>
             )
           })}
