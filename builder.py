@@ -4,6 +4,13 @@ import json
 import subprocess
 
 def main():
+    # check for uncommitted changes and bail if any
+    status_result = subprocess.run(['git', 'status', '--porcelain'], capture_output=True, text=True)
+    if status_result.stdout.strip():
+        print("Uncommitted changes detected. Please commit or stash them before building.")
+        return
+
+
     # always start from a clean dist/ and release/ folder
     clean_dist_folder()
 
