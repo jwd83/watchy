@@ -26,7 +26,9 @@ Before running Watchy, ensure you have the following:
 
 Visit our releases page. Mac users will need to run...
 
-`sudo xattr -cr /Applications/watchy.app`
+```bash
+sudo xattr -cr /Applications/watchy.app
+```
 
 ...once the app is installed
 
@@ -44,7 +46,10 @@ npm run dev
 
 To build the application for your mac or windows:
 
-`uv run builder.py`
+```bash
+uv run builder.py
+```
+
 
 ## Troubleshooting
 
@@ -53,6 +58,8 @@ To build the application for your mac or windows:
 - **Unlock failed?** Verify your AllDebrid API key and subscription status. If the file is not cached you may just need to try again later. You can view the AllDebrid cache download status in your account page on AllDebrid.
 - **macOS Damaged Error?** Try running...
 
-`sudo xattr -cr /Applications/watchy.app`
+```bash
+sudo xattr -cr /Applications/watchy.app
+```
 
 ...or adjust to wherever you have watchy installed.
