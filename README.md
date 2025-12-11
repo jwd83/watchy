@@ -1,12 +1,15 @@
 # Watchy
 
-**Watchy** is a modern Electron application that allows you to search for P2P content, cache it using AllDebrid, and stream it directly to VLC Media Player. It features a premium, dark-mode interface built with React and Tailwind CSS.
+**Watchy** allows you to search for P2P content, cache it using AllDebrid, stream or download it directly, and manage your personal library. 
 
 ## Features
 
 - **Integrated Search**: Search P2P networks directly from the app.
 - **Instant Caching**: Automatically uploads magnet links to AllDebrid for high-speed caching.
 - **Direct Streaming**: Unlocks video files and streams them directly to VLC Media Player.
+- **Download Support**: Download unlocked files directly to your device.
+- **Personal Library**: Save your favorite searches and magnet links for quick access.
+- **Play History**: Track your watched content with file-level resume functionality.
 - **Modern UI**: A sleek, responsive interface designed for a premium user experience.
 
 ## Prerequisites
