@@ -101,7 +101,7 @@ def change_version():
 
         print("Committing version change to git...")
         subprocess.run(['git', 'add', 'package.json'])
-        subprocess.run(['git', 'commit', '-m', f'{new_version} automated release version bump'])
+        subprocess.run(['git', 'commit', '-m', f'{new_version}'])
         subprocess.run(['git', 'push'])
 
         return new_version
