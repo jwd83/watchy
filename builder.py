@@ -9,6 +9,8 @@ def main():
     if status_result.stdout.strip():
         print("Uncommitted changes detected. Please commit or stash them before building.")
         return
+    
+    print("No uncommitted changes detected. Proceeding with build.")
 
 
     # always start from a clean dist/ and release/ folder
@@ -96,6 +98,11 @@ def change_version():
         with open('package.json', 'w') as f:
             json.dump(package_data, f, indent=2)
         print(f"Version updated to: {new_version}")
+
+        print("Committing version change to git...")
+        subprocess.run(['git', 'add', 'package.json'])
+        subprocess.run(['git', 'commit', '-m', f'Bump version to {new_version}'])
+        subprocess.run(['git', 'push'])
 
         return new_version
     else:
