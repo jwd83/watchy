@@ -8,6 +8,7 @@
 - **Instant Caching**: Automatically uploads magnet links to AllDebrid for high-speed caching.
 - **Direct Streaming**: Unlocks video files and streams them directly to VLC Media Player.
 - **Download Support**: Download unlocked files directly to your device.
+- **Downloads Tab**: A dedicated tab for managing your downloads.
 - **Personal Library**: Save your favorite searches and magnet links for quick access.
 - **Play History**: Track your watched content with file-level resume functionality.
 - **Modern UI**: A sleek, responsive interface designed for a premium user experience.
