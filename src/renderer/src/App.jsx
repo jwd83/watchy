@@ -208,7 +208,7 @@ function App() {
                 if (unlockRes.status === 'success') {
                   // unlockRes.data.link is the stream URL
                   unlockedFiles.push({
-                    filename: unlockRes.data.filename,
+                    filename: decodeURIComponent(unlockRes.data.filename),
                     link: unlockRes.data.link
                   })
                 }

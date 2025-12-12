@@ -22,7 +22,7 @@ class DownloadQueue {
   }
 
   add(url, options, sender) {
-    const filename = url.split('/').pop().split('?')[0] || 'unknown'
+    const filename = decodeURIComponent(url.split('/').pop().split('?')[0] || 'unknown')
     this.queue.push({ url, options, sender, filename })
     
     // Notify renderer about queued download
@@ -126,7 +126,7 @@ function createWindow() {
         } else {
           // Send progress to renderer
           mainWindow.webContents.send('download:progress', {
-            filename: item.getFilename(),
+            filename: decodeURIComponent(item.getFilename()),
             receivedBytes: item.getReceivedBytes(),
             totalBytes: item.getTotalBytes(),
             savePath: item.getSavePath(),
@@ -144,7 +144,7 @@ function createWindow() {
         console.log(`Download failed: ${state}`)
       }
       mainWindow.webContents.send('download:progress', {
-        filename: item.getFilename(),
+        filename: decodeURIComponent(item.getFilename()),
         savePath: item.getSavePath(),
         state: state === 'completed' ? 'completed' : 'failed'
       })
