@@ -10,6 +10,10 @@ const DownloadManager = ({ downloads, variant = 'overlay', hidden = false, onDis
     return downloads.filter((d) => d.state === 'progressing').length
   }, [downloads])
 
+  const queuedCount = useMemo(() => {
+    return downloads.filter((d) => d.state === 'queued').length
+  }, [downloads])
+
   useEffect(() => {
     // For the page view, render as a normal section; no overlay transitions needed.
     if (!isOverlay) return
@@ -46,7 +50,7 @@ const DownloadManager = ({ downloads, variant = 'overlay', hidden = false, onDis
           <span className="text-sm text-gray-400">
             {downloads.length === 0
               ? 'No downloads yet'
-              : `${activeCount} active • ${downloads.length} total`}
+              : `${activeCount} active${queuedCount > 0 ? ` • ${queuedCount} queued` : ''} • ${downloads.length} total`}
           </span>
         </div>
 
@@ -68,7 +72,9 @@ const DownloadManager = ({ downloads, variant = 'overlay', hidden = false, onDis
                       ? 'Done'
                       : download.state === 'failed'
                         ? 'Failed'
-                        : `${Math.round((download.receivedBytes / download.totalBytes) * 100)}%`}
+                        : download.state === 'queued'
+                          ? 'Queued'
+                          : `${Math.round((download.receivedBytes / download.totalBytes) * 100)}%`}
                   </span>
                 </div>
 
@@ -78,6 +84,11 @@ const DownloadManager = ({ downloads, variant = 'overlay', hidden = false, onDis
                       className="bg-accent h-1.5 rounded-full transition-all duration-300"
                       style={{ width: `${(download.receivedBytes / download.totalBytes) * 100}%` }}
                     />
+                  </div>
+                )}
+                {download.state === 'queued' && (
+                  <div className="text-xs text-yellow-500 mt-1">
+                    Waiting for slot (max 3 concurrent)
                   </div>
                 )}
                 {download.state === 'completed' && (
@@ -122,7 +133,9 @@ const DownloadManager = ({ downloads, variant = 'overlay', hidden = false, onDis
       <div className="bg-gray-800 px-4 py-2 border-b border-gray-700 flex justify-between items-center">
         <h3 className="text-sm font-semibold text-white">Downloads</h3>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-gray-400">{activeCount} active</span>
+          <span className="text-xs text-gray-400">
+            {activeCount} active{queuedCount > 0 ? ` • ${queuedCount} queued` : ''}
+          </span>
           <button
             type="button"
             onClick={() => onDismiss?.()}
@@ -160,7 +173,9 @@ const DownloadManager = ({ downloads, variant = 'overlay', hidden = false, onDis
                   ? 'Done'
                   : download.state === 'failed'
                     ? 'Failed'
-                    : `${Math.round((download.receivedBytes / download.totalBytes) * 100)}%`}
+                    : download.state === 'queued'
+                      ? 'Queued'
+                      : `${Math.round((download.receivedBytes / download.totalBytes) * 100)}%`}
               </span>
             </div>
             {download.state === 'progressing' && (
@@ -169,6 +184,11 @@ const DownloadManager = ({ downloads, variant = 'overlay', hidden = false, onDis
                   className="bg-accent h-1.5 rounded-full transition-all duration-300"
                   style={{ width: `${(download.receivedBytes / download.totalBytes) * 100}%` }}
                 />
+              </div>
+            )}
+            {download.state === 'queued' && (
+              <div className="text-xs text-yellow-500 mt-1">
+                Waiting for slot (max 3 concurrent)
               </div>
             )}
             {download.state === 'completed' && (

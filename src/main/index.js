@@ -8,6 +8,58 @@ import library from './services/library'
 
 const downloadTargets = new Map()
 
+// Download queue manager
+class DownloadQueue {
+  constructor(maxConcurrent = 3) {
+    this.maxConcurrent = maxConcurrent
+    this.activeDownloads = new Set()
+    this.queue = []
+    this.mainWindow = null
+  }
+
+  setMainWindow(window) {
+    this.mainWindow = window
+  }
+
+  add(url, options, sender) {
+    const filename = url.split('/').pop().split('?')[0] || 'unknown'
+    this.queue.push({ url, options, sender, filename })
+    
+    // Notify renderer about queued download
+    if (this.mainWindow) {
+      this.mainWindow.webContents.send('download:progress', {
+        filename,
+        state: 'queued',
+        queuePosition: this.queue.length
+      })
+    }
+    
+    this.processQueue()
+  }
+
+  processQueue() {
+    while (this.activeDownloads.size < this.maxConcurrent && this.queue.length > 0) {
+      const { url, options, sender } = this.queue.shift()
+      this.startDownload(url, options, sender)
+    }
+  }
+
+  startDownload(url, options, sender) {
+    this.activeDownloads.add(url)
+    if (options.directory) {
+      downloadTargets.set(url, options.directory)
+    }
+    sender.downloadURL(url)
+  }
+
+  onDownloadComplete(url) {
+    this.activeDownloads.delete(url)
+    this.processQueue()
+  }
+}
+
+const downloadQueue = new DownloadQueue(3)
+
 function createWindow() {
   // Icon path - dev uses build folder, prod uses extraResources
   const iconPath = is.dev
@@ -46,6 +98,9 @@ function createWindow() {
     mainWindow.show()
   })
 
+  // Set the main window reference for download queue
+  downloadQueue.setMainWindow(mainWindow)
+
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
     return { action: 'deny' }
@@ -82,6 +137,7 @@ function createWindow() {
     })
 
     item.once('done', (event, state) => {
+      const itemUrl = item.getURL()
       if (state === 'completed') {
         console.log('Download successfully')
       } else {
@@ -92,6 +148,8 @@ function createWindow() {
         savePath: item.getSavePath(),
         state: state === 'completed' ? 'completed' : 'failed'
       })
+      // Notify queue that download is complete so next can start
+      downloadQueue.onDownloadComplete(itemUrl)
     })
   })
 
@@ -154,10 +212,7 @@ app.whenReady().then(() => {
   })
 
   ipcMain.handle('api:download', (event, url, options = {}) => {
-    if (options.directory) {
-      downloadTargets.set(url, options.directory)
-    }
-    event.sender.downloadURL(url)
+    downloadQueue.add(url, options, event.sender)
   })
 
   ipcMain.handle('api:selectFolder', async () => {
