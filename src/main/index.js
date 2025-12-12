@@ -74,6 +74,7 @@ function createWindow() {
             filename: item.getFilename(),
             receivedBytes: item.getReceivedBytes(),
             totalBytes: item.getTotalBytes(),
+            savePath: item.getSavePath(),
             state: 'progressing'
           })
         }
@@ -88,6 +89,7 @@ function createWindow() {
       }
       mainWindow.webContents.send('download:progress', {
         filename: item.getFilename(),
+        savePath: item.getSavePath(),
         state: state === 'completed' ? 'completed' : 'failed'
       })
     })
@@ -139,6 +141,16 @@ app.whenReady().then(() => {
 
   ipcMain.handle('api:play', (_, url) => {
     vlc.play(url)
+  })
+
+  // Open containing folder in file explorer
+  ipcMain.handle('api:openFolder', (_, filePath) => {
+    shell.showItemInFolder(filePath)
+  })
+
+  // Play local file in VLC
+  ipcMain.handle('api:playFile', (_, filePath) => {
+    vlc.play(filePath)
   })
 
   ipcMain.handle('api:download', (event, url, options = {}) => {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import SearchBar from './components/SearchBar'
 import ResultCard from './components/ResultCard'
 import FileUserInterface from './components/FileUserInterface'
@@ -16,7 +16,7 @@ function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [statusModal, setStatusModal] = useState(null) // { message, type: 'loading' | 'success' | 'error' }
   const [currentQuery, setCurrentQuery] = useState('')
-  const [view, setView] = useState('search') // 'search', 'library', or 'history'
+  const [view, setView] = useState('search') // 'search', 'library', 'history', or 'downloads'
   const [savedSearches, setSavedSearches] = useState([])
   const [savedMagnets, setSavedMagnets] = useState([])
   const [history, setHistory] = useState([])
@@ -24,6 +24,12 @@ function App() {
   const [currentMagnet, setCurrentMagnet] = useState(null) // { hash, title }
   const [isNavStuck, setIsNavStuck] = useState(false)
   const [activeDownloads, setActiveDownloads] = useState([])
+  const [isDownloadModalDismissed, setIsDownloadModalDismissed] = useState(false)
+
+  const viewRef = useRef(view)
+  useEffect(() => {
+    viewRef.current = view
+  }, [view])
 
   useEffect(() => {
     window.api.getKey().then((key) => {
@@ -38,17 +44,15 @@ function App() {
       setActiveDownloads((prev) => {
         const index = prev.findIndex((d) => d.filename === data.filename)
         if (index === -1) {
-          // New download
+          // New download: re-show overlay unless the Downloads tab is active.
+          if (viewRef.current !== 'downloads') {
+            setIsDownloadModalDismissed(false)
+          }
           return [...prev, data]
         } else {
           // Update existing
           const newDownloads = [...prev]
           newDownloads[index] = { ...newDownloads[index], ...data }
-
-          // Optionally remove completed/failed after some time?
-          // For now let's keep them visible until manual dismissal or page refresh?
-          // The DownloadManager doesn't have dismissal yet.
-          // Let's just keep them.
           return newDownloads
         }
       })
@@ -343,6 +347,24 @@ function App() {
               History
             </button>
             <button
+              onClick={() => setView('downloads')}
+              className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+                view === 'downloads'
+                  ? 'bg-primary text-white'
+                  : 'text-gray-400 hover:text-white hover:bg-surface'
+              }`}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path d="M3 14a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm7-12a1 1 0 011 1v7.586l2.293-2.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 10.586V3a1 1 0 011-1z" />
+              </svg>
+              Downloads
+            </button>
+            <button
               onClick={() => setIsSettingsOpen(true)}
               className="p-2 text-gray-400 hover:text-white transition-colors"
             >
@@ -390,6 +412,8 @@ function App() {
             onRemoveSearch={handleRemoveSearch}
             onRemoveMagnet={handleRemoveMagnet}
           />
+        ) : view === 'downloads' ? (
+          <DownloadManager downloads={activeDownloads} variant="page" />
         ) : (
           <>
             <SearchBar
@@ -448,7 +472,11 @@ function App() {
         )}
 
         <StatusModal status={statusModal} onClose={clearStatusModal} />
-        <DownloadManager downloads={activeDownloads} />
+        <DownloadManager
+          downloads={activeDownloads}
+          hidden={view === 'downloads' || isDownloadModalDismissed}
+          onDismiss={() => setIsDownloadModalDismissed(true)}
+        />
       </div>
     </div>
   )
