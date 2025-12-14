@@ -151,6 +151,41 @@ class LibraryService {
 
     return { success: false, message: 'History entry not found' }
   }
+
+  // Download History Management
+  getDownloadHistory() {
+    return store.get('downloadHistory', [])
+  }
+
+  addToDownloadHistory(downloadData) {
+    const history = this.getDownloadHistory()
+    const historyEntry = {
+      id: Date.now().toString(),
+      filename: downloadData.filename,
+      state: downloadData.state,
+      savePath: downloadData.savePath || null,
+      receivedBytes: downloadData.receivedBytes || 0,
+      totalBytes: downloadData.totalBytes || 0,
+      completedAt: new Date().toISOString(),
+      originalState: downloadData.state // Store the original state (completed/failed)
+    }
+    
+    history.unshift(historyEntry)
+    store.set('downloadHistory', history)
+    return { success: true }
+  }
+
+  removeFromDownloadHistory(id) {
+    const history = this.getDownloadHistory()
+    const filtered = history.filter((h) => h.id !== id)
+    store.set('downloadHistory', filtered)
+    return { success: true, message: 'Download removed from history' }
+  }
+
+  clearDownloadHistory() {
+    store.set('downloadHistory', [])
+    return { success: true, message: 'Download history cleared' }
+  }
 }
 
 export default new LibraryService()

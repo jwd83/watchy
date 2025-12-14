@@ -25,6 +25,7 @@ function App() {
   const [isNavStuck, setIsNavStuck] = useState(false)
   const [activeDownloads, setActiveDownloads] = useState([])
   const [isDownloadModalDismissed, setIsDownloadModalDismissed] = useState(false)
+  const [downloadHistory, setDownloadHistory] = useState([])
 
   const viewRef = useRef(view)
   useEffect(() => {
@@ -39,6 +40,7 @@ function App() {
     })
     loadLibrary()
     loadHistory()
+    loadDownloadHistory()
 
     const removeListener = window.api.onDownloadProgress((data) => {
       setActiveDownloads((prev) => {
@@ -82,6 +84,11 @@ function App() {
   const loadHistory = async () => {
     const historyData = await window.api.getHistory()
     setHistory(historyData)
+  }
+
+  const loadDownloadHistory = async () => {
+    const historyData = await window.api.getDownloadHistory()
+    setDownloadHistory(historyData)
   }
 
   const showToast = (message, type = 'success') => {
@@ -273,6 +280,18 @@ function App() {
     await loadHistory()
   }
 
+  const handleRemoveFromDownloadHistory = async (id) => {
+    const result = await window.api.removeFromDownloadHistory(id)
+    showToast(result.message)
+    await loadDownloadHistory()
+  }
+
+  const handleClearDownloadHistory = async () => {
+    const result = await window.api.clearDownloadHistory()
+    showToast(result.message)
+    await loadDownloadHistory()
+  }
+
   const handleViewMagnetFromHistory = (magnetHash, magnetTitle) => {
     // Reconstruct magnet link from hash
     const magnetLink = `magnet:?xt=urn:btih:${magnetHash}`
@@ -413,7 +432,13 @@ function App() {
             onRemoveMagnet={handleRemoveMagnet}
           />
         ) : view === 'downloads' ? (
-          <DownloadManager downloads={activeDownloads} variant="page" />
+          <DownloadManager
+            downloads={activeDownloads}
+            variant="page"
+            downloadHistory={downloadHistory}
+            onRemoveFromHistory={handleRemoveFromDownloadHistory}
+            onClearHistory={handleClearDownloadHistory}
+          />
         ) : (
           <>
             <SearchBar
@@ -474,6 +499,7 @@ function App() {
         <StatusModal status={statusModal} onClose={clearStatusModal} />
         <DownloadManager
           downloads={activeDownloads}
+          downloadHistory={downloadHistory}
           hidden={view === 'downloads' || isDownloadModalDismissed}
           onDismiss={() => setIsDownloadModalDismissed(true)}
         />

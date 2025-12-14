@@ -29,6 +29,10 @@ const api = {
   removeAllHistory: () => ipcRenderer.invoke('api:removeAllHistory'),
   resetFileWatched: (historyId, filename) =>
     ipcRenderer.invoke('api:resetFileWatched', historyId, filename),
+  // Download History APIs
+  getDownloadHistory: () => ipcRenderer.invoke('api:getDownloadHistory'),
+  removeFromDownloadHistory: (id) => ipcRenderer.invoke('api:removeFromDownloadHistory', id),
+  clearDownloadHistory: () => ipcRenderer.invoke('api:clearDownloadHistory'),
   onDownloadProgress: (callback) => {
     const subscription = (event, data) => callback(data)
     ipcRenderer.on('download:progress', subscription)

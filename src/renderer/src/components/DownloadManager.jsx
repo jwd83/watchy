@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 
-const DownloadManager = ({ downloads, variant = 'overlay', hidden = false, onDismiss }) => {
+const DownloadManager = ({ downloads, variant = 'overlay', hidden = false, onDismiss, downloadHistory = [], onRemoveFromHistory, onClearHistory }) => {
   const [isVisible, setIsVisible] = useState(false)
   const [shouldRender, setShouldRender] = useState(false)
 
@@ -44,81 +44,162 @@ const DownloadManager = ({ downloads, variant = 'overlay', hidden = false, onDis
 
   if (!isOverlay) {
     return (
-      <div className="bg-surface rounded-xl p-6 border border-gray-700">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold">Downloads</h2>
-          <span className="text-sm text-gray-400">
-            {downloads.length === 0
-              ? 'No downloads yet'
-              : `${activeCount} active${queuedCount > 0 ? ` • ${queuedCount} queued` : ''} • ${downloads.length} total`}
-          </span>
+      <div className="space-y-6">
+        {/* Active Downloads Section */}
+        <div className="bg-surface rounded-xl p-6 border border-gray-700">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold">Active Downloads</h2>
+            <span className="text-sm text-gray-400">
+              {downloads.length === 0
+                ? 'No active downloads'
+                : `${activeCount} active${queuedCount > 0 ? ` • ${queuedCount} queued` : ''} • ${downloads.length} total`}
+            </span>
+          </div>
+
+          {downloads.length === 0 ? (
+            <div className="text-gray-400 text-sm">Start a download to see progress here.</div>
+          ) : (
+            <div className="space-y-2">
+              {downloads.map((download) => (
+                <div
+                  key={download.filename}
+                  className="p-3 bg-background rounded-lg border border-gray-700/60"
+                >
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-sm text-gray-200 truncate pr-2" title={download.filename}>
+                      {download.filename}
+                    </span>
+                    <span className="text-xs text-gray-400 whitespace-nowrap">
+                      {download.state === 'completed'
+                        ? 'Done'
+                        : download.state === 'failed'
+                          ? 'Failed'
+                          : download.state === 'queued'
+                            ? 'Queued'
+                            : `${Math.round((download.receivedBytes / download.totalBytes) * 100)}%`}
+                    </span>
+                  </div>
+
+                  {download.state === 'progressing' && (
+                    <div className="w-full bg-gray-700 rounded-full h-1.5 mt-1">
+                      <div
+                        className="bg-accent h-1.5 rounded-full transition-all duration-300"
+                        style={{ width: `${(download.receivedBytes / download.totalBytes) * 100}%` }}
+                      />
+                    </div>
+                  )}
+                  {download.state === 'queued' && (
+                    <div className="text-xs text-yellow-500 mt-1">
+                      Waiting for slot (max 3 concurrent)
+                    </div>
+                  )}
+                  {download.state === 'completed' && (
+                    <div className="text-xs text-green-500 mt-1">Download complete</div>
+                  )}
+                  {download.state === 'completed' && download.savePath && (
+                    <div className="flex items-center gap-2 mt-2">
+                      <button
+                        type="button"
+                        onClick={() => window.api.openFolder(download.savePath)}
+                        className="text-xs px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded transition-colors"
+                      >
+                        📁 Open Folder
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => window.api.playFile(download.savePath)}
+                        className="text-xs px-2 py-1 bg-accent hover:bg-accent/80 rounded transition-colors"
+                      >
+                        ▶️ Play in VLC
+                      </button>
+                    </div>
+                  )}
+                  {download.state === 'failed' && (
+                    <div className="text-xs text-red-500 mt-1">Download failed</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {downloads.length === 0 ? (
-          <div className="text-gray-400 text-sm">Start a download to see progress here.</div>
-        ) : (
-          <div className="space-y-2">
-            {downloads.map((download) => (
-              <div
-                key={download.filename}
-                className="p-3 bg-background rounded-lg border border-gray-700/60"
-              >
-                <div className="flex justify-between items-center mb-1">
-                  <span className="text-sm text-gray-200 truncate pr-2" title={download.filename}>
-                    {download.filename}
-                  </span>
-                  <span className="text-xs text-gray-400 whitespace-nowrap">
-                    {download.state === 'completed'
-                      ? 'Done'
-                      : download.state === 'failed'
-                        ? 'Failed'
-                        : download.state === 'queued'
-                          ? 'Queued'
-                          : `${Math.round((download.receivedBytes / download.totalBytes) * 100)}%`}
-                  </span>
-                </div>
-
-                {download.state === 'progressing' && (
-                  <div className="w-full bg-gray-700 rounded-full h-1.5 mt-1">
-                    <div
-                      className="bg-accent h-1.5 rounded-full transition-all duration-300"
-                      style={{ width: `${(download.receivedBytes / download.totalBytes) * 100}%` }}
-                    />
-                  </div>
-                )}
-                {download.state === 'queued' && (
-                  <div className="text-xs text-yellow-500 mt-1">
-                    Waiting for slot (max 3 concurrent)
-                  </div>
-                )}
-                {download.state === 'completed' && (
-                  <div className="text-xs text-green-500 mt-1">Download complete</div>
-                )}
-                {download.state === 'completed' && download.savePath && (
-                  <div className="flex items-center gap-2 mt-2">
-                    <button
-                      type="button"
-                      onClick={() => window.api.openFolder(download.savePath)}
-                      className="text-xs px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded transition-colors"
-                    >
-                      📁 Open Folder
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => window.api.playFile(download.savePath)}
-                      className="text-xs px-2 py-1 bg-accent hover:bg-accent/80 rounded transition-colors"
-                    >
-                      ▶️ Play in VLC
-                    </button>
-                  </div>
-                )}
-                {download.state === 'failed' && (
-                  <div className="text-xs text-red-500 mt-1">Download failed</div>
-                )}
-              </div>
-            ))}
+        {/* Completed Downloads (History) Section */}
+        <div className="bg-surface rounded-xl p-6 border border-gray-700">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold">Completed Downloads (History)</h2>
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-gray-400">
+                {downloadHistory.length === 0
+                  ? 'No completed downloads'
+                  : `${downloadHistory.length} completed`}
+              </span>
+              {downloadHistory.length > 0 && (
+                <button
+                  type="button"
+                  onClick={onClearHistory}
+                  className="text-xs px-3 py-1 bg-red-600 hover:bg-red-700 rounded transition-colors"
+                >
+                  Clear All
+                </button>
+              )}
+            </div>
           </div>
-        )}
+
+          {downloadHistory.length === 0 ? (
+            <div className="text-gray-400 text-sm">Completed downloads will appear here.</div>
+          ) : (
+            <div className="space-y-2">
+              {downloadHistory.map((historyItem) => (
+                <div
+                  key={historyItem.id}
+                  className="p-3 bg-background rounded-lg border border-gray-700/60"
+                >
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-sm text-gray-200 truncate pr-2" title={historyItem.filename}>
+                      {historyItem.filename}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-400 whitespace-nowrap">
+                        {historyItem.state === 'completed' ? 'Completed' : 'Failed'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => onRemoveFromHistory(historyItem.id)}
+                        className="text-xs px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded transition-colors"
+                        title="Remove from history"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="text-xs text-gray-500 mt-1">
+                    {new Date(historyItem.completedAt).toLocaleString()}
+                  </div>
+
+                  {historyItem.state === 'completed' && historyItem.savePath && (
+                    <div className="flex items-center gap-2 mt-2">
+                      <button
+                        type="button"
+                        onClick={() => window.api.openFolder(historyItem.savePath)}
+                        className="text-xs px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded transition-colors"
+                      >
+                        📁 Open Folder
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => window.api.playFile(historyItem.savePath)}
+                        className="text-xs px-2 py-1 bg-accent hover:bg-accent/80 rounded transition-colors"
+                      >
+                        ▶️ Play in VLC
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     )
   }

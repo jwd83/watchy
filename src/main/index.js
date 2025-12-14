@@ -138,16 +138,24 @@ function createWindow() {
 
     item.once('done', (event, state) => {
       const itemUrl = item.getURL()
+      const downloadData = {
+        filename: decodeURIComponent(item.getFilename()),
+        savePath: item.getSavePath(),
+        state: state === 'completed' ? 'completed' : 'failed',
+        receivedBytes: item.getReceivedBytes(),
+        totalBytes: item.getTotalBytes()
+      }
+
       if (state === 'completed') {
         console.log('Download successfully')
       } else {
         console.log(`Download failed: ${state}`)
       }
-      mainWindow.webContents.send('download:progress', {
-        filename: decodeURIComponent(item.getFilename()),
-        savePath: item.getSavePath(),
-        state: state === 'completed' ? 'completed' : 'failed'
-      })
+
+      // Add to download history
+      library.addToDownloadHistory(downloadData)
+
+      mainWindow.webContents.send('download:progress', downloadData)
       // Notify queue that download is complete so next can start
       downloadQueue.onDownloadComplete(itemUrl)
     })
@@ -275,6 +283,19 @@ app.whenReady().then(() => {
 
   ipcMain.handle('api:resetFileWatched', (_, historyId, filename) => {
     return library.resetFileWatched(historyId, filename)
+  })
+
+  // Download History handlers
+  ipcMain.handle('api:getDownloadHistory', () => {
+    return library.getDownloadHistory()
+  })
+
+  ipcMain.handle('api:removeFromDownloadHistory', (_, id) => {
+    return library.removeFromDownloadHistory(id)
+  })
+
+  ipcMain.handle('api:clearDownloadHistory', () => {
+    return library.clearDownloadHistory()
   })
 
   createWindow()
