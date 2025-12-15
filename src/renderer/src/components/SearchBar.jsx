@@ -146,7 +146,7 @@ const SearchBar = ({ onSearch, onSaveSearch, isLoading, currentQuery }) => {
                           {s.imdbId ? ` • ${s.imdbId}` : ''}
                         </div>
                       </div>
-                      <div className="text-xs text-gray-500 whitespace-nowrap">
+                      <div className="text-sm text-gray-400 whitespace-nowrap">
                         {typeof s.rating === 'number' && s.rating > 0 ? `★ ${s.rating}` : ''}
                       </div>
                     </button>
