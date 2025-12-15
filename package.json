@@ -1,6 +1,6 @@
 {
   "name": "watchy",
-  "version": "0.0.31",
+  "version": "0.0.32",
   "description": "Search P2P content, cache via AllDebrid, and stream to VLC",
   "main": "./out/main/index.js",
   "author": "jwd.me",
