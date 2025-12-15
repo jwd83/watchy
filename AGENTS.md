@@ -89,6 +89,16 @@ Services are singleton instances in `src/main/services/`:
 - Prevents duplicate entries
 - Uses ISO timestamps for sorting
 
+**mediaCatalog.js**
+
+- Reads a local SQLite database `media_catalog.db` (readonly) using `better-sqlite3`
+- Provides autosuggest results for the search bar (title/year/type/rating/votes + IMDbID)
+- IPC: exposed via `api:mediaSuggest` → `window.api.mediaSuggest(query, limit)`
+
+Notes on IMDbID searches:
+- When a suggestion is chosen, the UI formats queries like: `Some Title (2024) [tt1234567]`
+- `App.handleSearch()` will detect `tt\d{7,8}` anywhere in the query string and perform the actual P2P search using only the `tt...` token, while keeping the full string for saving/history clarity.
+
 ### IPC Communication Pattern
 
 All communication between renderer and main follows this pattern:
@@ -141,6 +151,18 @@ Tailwind CSS with custom theme in `tailwind.config.js`:
 2. Register IPC handler in `src/main/index.js` using `ipcMain.handle('api:methodName', ...)`
 3. Expose method in `src/preload/index.js` via the `api` object
 4. Call from renderer using `window.api.methodName()`
+
+### Native Node Modules (Electron)
+
+This repo uses native modules (e.g. `better-sqlite3`) that must be rebuilt against Electron.
+
+- If you add/update a native dependency and see a `NODE_MODULE_VERSION` mismatch, run:
+
+```bash
+npx electron-builder install-app-deps
+```
+
+(`npm run postinstall` also runs this after installs.)
 
 ### Data Persistence
 
