@@ -108,7 +108,7 @@ def change_version():
     # Let npm update package.json + package-lock.json in a canonical way.
     # --no-git-tag-version: builder.py controls tagging separately.
     print(f"Running: npm version {new_version} --no-git-tag-version")
-    npm_result = subprocess.run(['npm', 'version', new_version, '--no-git-tag-version'])
+    npm_result = subprocess.run(['npm', 'version', new_version, '--no-git-tag-version'], shell=True, capture_output=True, text=True, check=True)
     if npm_result.returncode != 0:
         print(f"npm version failed (exit {npm_result.returncode}); aborting version change.")
         return current_version
