@@ -1,4 +1,22 @@
 const FileUserInterface = ({ files, onPlay, watchedFiles = [] }) => {
+  const basename = (p) => {
+    if (!p) return ''
+    const s = String(p)
+    // Support both folder separators since we sometimes build paths with '/'
+    return s.split('/').pop().split('\\').pop()
+  }
+
+  const resolveLink = async (url) => {
+    try {
+      if (window?.api?.resolve) {
+        return await window.api.resolve(url)
+      }
+    } catch {
+      // ignore and fall back
+    }
+    return url
+  }
+
   // Natural sort comparator for filenames with episode numbers
   const naturalSort = (a, b) => {
     return a.filename.localeCompare(b.filename, undefined, { numeric: true, sensitivity: 'base' })
@@ -23,9 +41,13 @@ const FileUserInterface = ({ files, onPlay, watchedFiles = [] }) => {
         <div className="space-y-2">
           <div className="flex justify-end gap-2 mb-4">
             <button
-              onClick={() => {
-                const links = videoFiles.map((f) => f.link).join('\n')
-                navigator.clipboard.writeText(links)
+              onClick={async () => {
+                const resolved = []
+                for (const f of videoFiles) {
+                  resolved.push(await resolveLink(f.link))
+                }
+                const links = resolved.join('\n')
+                await navigator.clipboard.writeText(links)
               }}
               className="px-4 py-2 bg-surface hover:bg-gray-700 text-white rounded-lg text-sm font-medium transition-colors border border-gray-600 flex items-center gap-2"
             >
@@ -50,13 +72,14 @@ const FileUserInterface = ({ files, onPlay, watchedFiles = [] }) => {
                 const folder = await window.api.selectFolder()
                 if (folder) {
                   // Trigger downloads
-                  files.forEach((file) => {
+                  for (const file of files) {
                     // Check extension again just in case, though videoFiles is filtered
                     const ext = file.filename.split('.').pop().toLowerCase()
                     if (['mp4', 'mkv', 'avi', 'mov', 'wmv'].includes(ext)) {
-                      window.api.download(file.link, { directory: folder })
+                      const url = await resolveLink(file.link)
+                      window.api.download(url, { directory: folder })
                     }
-                  })
+                  }
                 }
               }}
               className="px-4 py-2 bg-primary hover:bg-primary/80 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
@@ -101,8 +124,8 @@ const FileUserInterface = ({ files, onPlay, watchedFiles = [] }) => {
                       />
                     </svg>
                   )}
-                  <span className={`truncate ${watched ? 'text-gray-400' : ''}`}>
-                    {file.filename}
+                  <span className={`truncate ${watched ? 'text-gray-400' : ''}`} title={file.filename}>
+                    {basename(file.filename)}
                   </span>
                 </div>
                 <div className="flex gap-2 flex-shrink-0">
@@ -113,7 +136,10 @@ const FileUserInterface = ({ files, onPlay, watchedFiles = [] }) => {
                     Play in VLC
                   </button>
                   <button
-                    onClick={() => window.api.download(file.link)}
+                    onClick={async () => {
+                      const url = await resolveLink(file.link)
+                      window.api.download(url)
+                    }}
                     className="px-4 py-2 bg-surface hover:bg-gray-700 text-white rounded-lg text-sm font-medium transition-colors border border-gray-600 flex items-center gap-2 whitespace-nowrap"
                     title="Download File"
                   >

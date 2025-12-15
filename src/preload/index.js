@@ -6,7 +6,11 @@ const api = {
   search: (query) => ipcRenderer.invoke('api:search', query),
   unlock: (magnet) => ipcRenderer.invoke('api:unlock', magnet),
   getStatus: (id) => ipcRenderer.invoke('api:getStatus', id),
+  // New v4.1 helpers
+  getStatusV41: (params) => ipcRenderer.invoke('api:getStatusV41', params),
+  getMagnetFiles: (ids) => ipcRenderer.invoke('api:getMagnetFiles', ids),
   getFiles: (link) => ipcRenderer.invoke('api:getFiles', link),
+  resolve: (url) => ipcRenderer.invoke('api:resolve', url),
   play: (url) => ipcRenderer.invoke('api:play', url),
   openFolder: (filePath) => ipcRenderer.invoke('api:openFolder', filePath),
   playFile: (filePath) => ipcRenderer.invoke('api:playFile', filePath),
@@ -14,6 +18,9 @@ const api = {
   selectFolder: () => ipcRenderer.invoke('api:selectFolder'),
   saveKey: (key) => ipcRenderer.invoke('api:saveKey', key),
   getKey: () => ipcRenderer.invoke('api:getKey'),
+  // MagnetId map APIs
+  getMagnetIdByHash: (hash) => ipcRenderer.invoke('api:getMagnetIdByHash', hash),
+  setMagnetId: (hash, id) => ipcRenderer.invoke('api:setMagnetId', hash, id),
   // Library APIs
   getSavedSearches: () => ipcRenderer.invoke('api:getSavedSearches'),
   addSavedSearch: (query) => ipcRenderer.invoke('api:addSavedSearch', query),

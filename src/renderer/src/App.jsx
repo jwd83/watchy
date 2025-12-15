@@ -164,71 +164,63 @@ function App() {
   const handleSelectResult = async (result) => {
     setIsLoading(true)
     setView('search') // Switch to search view to show files
-    setStatusModal({ message: `Unlocking "${result.title}"...`, type: 'loading' })
+    setStatusModal({ message: `Unlocking \"${result.title}\"...`, type: 'loading' })
 
     // Store current magnet context for history tracking
-    setCurrentMagnet({
-      hash: extractMagnetHash(result.magnet),
-      title: result.title
-    })
+    const hash = extractMagnetHash(result.magnet)
+    setCurrentMagnet({ hash, title: result.title })
 
     try {
-      const uploadResponse = await window.api.unlock(result.magnet)
-
-      if (uploadResponse.status === 'success') {
-        const magnetId = uploadResponse.data.magnets[0].id
-
-        // Poll for status until ready (simplified for now, just check once or wait)
-        // In a real app, we'd poll. For now, let's assume it might be instant or cached.
-        // If it's not instant, we might need to wait.
-        // Let's try to get files immediately.
-
-        // Wait a second for AllDebrid to process
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-
-        const statusResponse = await window.api.getStatus(magnetId)
-        if (statusResponse.status === 'success') {
-          const magnetStatus = statusResponse.data.magnets // It returns an object or array?
-          // The API returns { status: 'success', data: { magnets: { [id]: { ... } } } }
-          // Or { data: { magnets: [ ... ] } } depending on endpoint.
-          // Let's assume we can get the link if it's ready.
-
-          if (magnetStatus.statusCode === 4) {
-            // 4 = Ready
-            // It's ready, but we need the links.
-            // The 'links' array in status contains the downloadable links.
-            const links = magnetStatus.links
-
-            // We need to unlock these links to get the actual file stream URL
-            // For simplicity, let's just take the first link and unlock it to see files?
-            // Actually, AllDebrid 'unlock' on a link returns the file stream.
-
-            // Let's just show the links and let user click?
-            // No, we want to list files.
-
-            // If we have links, we can unlock them.
-            // Let's try to unlock the first link if available.
-            if (links && links.length > 0) {
-              const unlockedFiles = []
-              for (const link of links) {
-                const unlockRes = await window.api.getFiles(link.link)
-                if (unlockRes.status === 'success') {
-                  // unlockRes.data.link is the stream URL
-                  unlockedFiles.push({
-                    filename: decodeURIComponent(unlockRes.data.filename),
-                    link: unlockRes.data.link
-                  })
-                }
-              }
-              setFiles(unlockedFiles)
-              setStatusModal({ message: 'Ready to play!', type: 'success' })
-            }
-          } else {
-            setStatusModal({
-              message: `Torrent is processing (Status: ${magnetStatus.status}). Please try again in a moment.`,
-              type: 'error'
-            })
+      // 1) Fast path: if we've seen this magnet before, try its saved id.
+      const existingId = await window.api.getMagnetIdByHash(hash)
+      if (existingId) {
+        const st = await window.api.getStatusV41({ id: existingId })
+        const m = st?.data?.magnets?.[0]
+        if (m && m.statusCode === 4) {
+          const filesRes = await window.api.getMagnetFiles([existingId])
+          let unlockedFiles = flattenMagnetFilesResponse(filesRes)
+          if (unlockedFiles.length === 0) {
+            // Fallback: use legacy status links + unlock
+            const legacy = await window.api.getStatus(existingId)
+            const links = extractLinksFromLegacyStatus(legacy, existingId)
+            unlockedFiles = await unlockLinksToFiles(links)
           }
+          if (unlockedFiles.length > 0) {
+            setFiles(unlockedFiles)
+            setStatusModal({ message: 'Ready to play!', type: 'success' })
+            setIsLoading(false)
+            return
+          }
+        }
+        // If not ready or files missing, fall through to upload path.
+      }
+
+      // 2) Upload path: upload magnet (API returns id + ready flag)
+      const uploadResponse = await window.api.unlock(result.magnet)
+      if (uploadResponse.status === 'success' && uploadResponse?.data?.magnets?.length) {
+        const { id: magnetId, ready } = uploadResponse.data.magnets[0]
+
+        // Save mapping for next time
+        await window.api.setMagnetId(hash, magnetId)
+
+        if (ready) {
+          // Instantly available — fetch files directly
+          const filesRes = await window.api.getMagnetFiles([magnetId])
+          let unlockedFiles = flattenMagnetFilesResponse(filesRes)
+          if (unlockedFiles.length === 0) {
+            // Fallback: use legacy status links + unlock
+            const legacy = await window.api.getStatus(magnetId)
+            const links = extractLinksFromLegacyStatus(legacy, magnetId)
+            unlockedFiles = await unlockLinksToFiles(links)
+          }
+          if (unlockedFiles.length > 0) {
+            setFiles(unlockedFiles)
+            setStatusModal({ message: 'Ready to play!', type: 'success' })
+          } else {
+            setStatusModal({ message: 'No files found for this magnet.', type: 'error' })
+          }
+        } else {
+          setStatusModal({ message: 'Caching on AllDebrid. Try again shortly.', type: 'error' })
         }
       } else {
         setStatusModal({ message: 'Failed to upload magnet.', type: 'error' })
@@ -247,12 +239,72 @@ function App() {
     return match ? match[1].toLowerCase() : magnetLink
   }
 
+  // Flatten AllDebrid magnet/files response into [{ filename, link }]
+  const flattenMagnetFilesResponse = (filesRes) => {
+    const out = []
+    const magnetsMaybeArray = filesRes?.data?.magnets
+    const magnets = Array.isArray(magnetsMaybeArray)
+      ? magnetsMaybeArray
+      : magnetsMaybeArray && typeof magnetsMaybeArray === 'object'
+        ? Object.values(magnetsMaybeArray)
+        : []
+
+    const walk = (node, prefix = '') => {
+      if (!node) return
+      const name = node.n ? decodeURIComponent(node.n) : ''
+      const full = name ? (prefix ? `${prefix}/${name}` : name) : prefix
+      if (node.l) {
+        out.push({ filename: full || 'file', link: node.l })
+      }
+      if (Array.isArray(node.e)) {
+        for (const child of node.e) walk(child, full)
+      }
+    }
+
+    for (const m of magnets) {
+      if (Array.isArray(m.files)) {
+        for (const root of m.files) walk(root, '')
+      }
+    }
+    return out
+  }
+
+  // Extract hoster links from legacy v4 GET status response
+  const extractLinksFromLegacyStatus = (statusRes, id) => {
+    const magnets = statusRes?.data?.magnets
+    const m = Array.isArray(magnets)
+      ? magnets.find((x) => String(x.id) === String(id))
+      : magnets && typeof magnets === 'object'
+        ? magnets[String(id)]
+        : null
+    const links = m?.links || []
+    // Links array may be [{ link, filename }, ...] or strings
+    return links.map((l) => (typeof l === 'string' ? l : l.link))
+  }
+
+  // Unlock AllDebrid file links to direct URLs
+  const unlockLinksToFiles = async (links) => {
+    const out = []
+    for (const link of links) {
+      try {
+        const unlock = await window.api.getFiles(link)
+        if (unlock?.status === 'success' && unlock?.data?.link) {
+          out.push({ filename: decodeURIComponent(unlock.data.filename || 'file'), link: unlock.data.link })
+        }
+      } catch (e) {
+        // ignore individual link failures
+      }
+    }
+    return out
+  }
+
   const handlePlay = async (url, filename) => {
-    window.api.play(url)
+    // main process will attempt to resolve AllDebrid links to a direct playable URL
+    const playableUrl = await window.api.play(url)
 
     // Record play in history if we have current magnet context
     if (currentMagnet) {
-      await window.api.recordPlay(currentMagnet.hash, currentMagnet.title, filename, url)
+      await window.api.recordPlay(currentMagnet.hash, currentMagnet.title, filename, playableUrl)
       await loadHistory()
     }
   }
@@ -419,7 +471,9 @@ function App() {
             onRemoveEntry={handleRemoveHistoryEntry}
             onRemoveAll={handleRemoveAllHistory}
             onResetFile={handleResetFileWatched}
-            onPlayFile={(url) => window.api.play(url)}
+            onPlayFile={async (url) => {
+              await window.api.play(url)
+            }}
             onViewMagnet={handleViewMagnetFromHistory}
           />
         ) : view === 'library' ? (

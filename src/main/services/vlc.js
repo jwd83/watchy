@@ -1,16 +1,42 @@
 import { spawn } from 'child_process'
 
 class VLCService {
-  play(url) {
+  sanitizeInput(input) {
+    // Some API responses may accidentally pass an object (e.g. { link: "..." })
+    // which would become "[object Object]" on the command line.
+    let value = input
+
+    if (value && typeof value === 'object') {
+      if (typeof value.link === 'string') value = value.link
+      else if (typeof value.l === 'string') value = value.l
+      else value = String(value)
+    }
+
+    if (typeof value !== 'string') value = String(value ?? '')
+
+    value = value.trim()
+
+    // Guard against HTML-escaped ampersands which break query strings.
+    value = value.replaceAll('&amp;', '&')
+
+    // Only normalize URLs (do NOT encode local file paths).
+    if (/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(value)) {
+      try {
+        value = encodeURI(value)
+      } catch {
+        // ignore encoding errors; keep original
+      }
+    }
+
+    return value
+  }
+
+  play(input) {
+    const url = this.sanitizeInput(input)
     console.log('Opening VLC with URL:', url)
-    // Try to find VLC in standard locations or just use 'vlc' command
-    const vlcCommand = 'vlc'
-    // On macOS, it might be /Applications/VLC.app/Contents/MacOS/VLC
-    // We can try to detect or just assume 'vlc' is in PATH or use the full path.
-    // For a robust app, we'd check OS.
 
     let command = 'vlc'
-    let args = [url]
+    const args = [url]
 
     if (process.platform === 'darwin') {
       command = '/Applications/VLC.app/Contents/MacOS/VLC'
@@ -18,15 +44,18 @@ class VLCService {
       command = 'C:\\Program Files\\VideoLAN\\VLC\\vlc.exe'
     }
 
-    const vlcProcess = spawn(command, args)
+    const vlcProcess = spawn(command, args, {
+      windowsHide: true,
+      detached: true,
+      stdio: 'ignore'
+    })
 
     vlcProcess.on('error', (err) => {
       console.error('Failed to start VLC:', err)
     })
 
-    vlcProcess.on('close', (code) => {
-      console.log(`VLC process exited with code ${code}`)
-    })
+    // Let Electron continue even if VLC is still running.
+    vlcProcess.unref()
   }
 }
 

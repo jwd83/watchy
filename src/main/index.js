@@ -200,13 +200,58 @@ app.whenReady().then(() => {
     return await allDebrid.getStatus(id)
   })
 
+  // v4.1: get magnet status (by id or filter)
+  ipcMain.handle('api:getStatusV41', async (_, params) => {
+    return await allDebrid.getStatusV41(params)
+  })
+
+  // v4: get files for one or more magnet IDs
+  ipcMain.handle('api:getMagnetFiles', async (_, ids) => {
+    return await allDebrid.getFiles(ids)
+  })
+
   ipcMain.handle('api:getFiles', async (_, link) => {
-    // Note: 'unlockLink' in service returns the unlocked link info which contains files
+    // Note: 'unlockLink' in service returns the unlocked link info which contains files for host links
     return await allDebrid.unlockLink(link)
   })
 
-  ipcMain.handle('api:play', (_, url) => {
-    vlc.play(url)
+  // Resolve AllDebrid hoster links to a direct URL.
+  // If the link is already direct/playable, we fall back to the original.
+  ipcMain.handle('api:resolve', async (_, url) => {
+    let resolvedUrl = url
+
+    try {
+      if (typeof url === 'string' && url.startsWith('http')) {
+        const unlock = await allDebrid.unlockLink(url)
+        if (unlock?.status === 'success' && unlock?.data?.link) {
+          resolvedUrl = unlock.data.link
+        }
+      }
+    } catch {
+      // ignore unlock failures; fall back to original url
+    }
+
+    return resolvedUrl
+  })
+
+  // Resolve AllDebrid hoster links to a direct playable URL before launching VLC.
+  // If the link is already playable, we fall back to the original.
+  ipcMain.handle('api:play', async (_, url) => {
+    let playableUrl = url
+
+    try {
+      if (typeof url === 'string' && url.startsWith('http')) {
+        const unlock = await allDebrid.unlockLink(url)
+        if (unlock?.status === 'success' && unlock?.data?.link) {
+          playableUrl = unlock.data.link
+        }
+      }
+    } catch {
+      // ignore unlock failures; we'll try to play the original url
+    }
+
+    vlc.play(playableUrl)
+    return playableUrl
   })
 
   // Open containing folder in file explorer
@@ -237,6 +282,15 @@ app.whenReady().then(() => {
 
   ipcMain.handle('api:getKey', () => {
     return allDebrid.apiKey
+  })
+
+  // MagnetId map helpers
+  ipcMain.handle('api:getMagnetIdByHash', (_, hash) => {
+    return library.getMagnetIdByHash(hash)
+  })
+
+  ipcMain.handle('api:setMagnetId', (_, hash, id) => {
+    return library.setMagnetId(hash, id)
   })
 
   // Library handlers

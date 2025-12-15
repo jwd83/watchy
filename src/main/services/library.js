@@ -8,6 +8,19 @@ class LibraryService {
     return store.get('savedSearches', [])
   }
 
+  // Magnet ID cache (hash -> id)
+  getMagnetIdByHash(hash) {
+    const map = store.get('magnetIdMap', {})
+    return map[hash] || null
+  }
+
+  setMagnetId(hash, id) {
+    const map = store.get('magnetIdMap', {})
+    map[hash] = id
+    store.set('magnetIdMap', map)
+    return { success: true }
+  }
+
   addSavedSearch(searchQuery) {
     const searches = this.getSavedSearches()
     const existing = searches.find((s) => s.query === searchQuery)

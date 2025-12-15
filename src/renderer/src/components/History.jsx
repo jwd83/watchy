@@ -1,5 +1,11 @@
 import React from 'react'
 
+const basename = (p) => {
+  if (!p) return ''
+  const s = String(p)
+  return s.split('/').pop().split('\\').pop()
+}
+
 const History = ({
   history,
   onRemoveEntry,
@@ -86,7 +92,9 @@ const History = ({
                         />
                       </svg>
                       <div className="flex-1 min-w-0">
-                        <div className="truncate text-sm">{file.filename}</div>
+                        <div className="truncate text-sm" title={file.filename}>
+                          {basename(file.filename)}
+                        </div>
                         <div className="text-xs text-gray-500">
                           Played {file.playCount} {file.playCount === 1 ? 'time' : 'times'} · Last
                           played {new Date(file.playedAt).toLocaleString()}
