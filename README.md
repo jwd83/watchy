@@ -45,11 +45,19 @@ npm run dev
 
 ### Building for Production
 
-To build the application for your mac or windows:
+Installers are built on GitHub Actions (not on your local machine). To cut a release:
 
 ```bash
 uv run builder.py
 ```
+
+By default, `builder.py` will:
+- (Optionally) bump the version and push the commit
+- Create and push a git tag like `v0.0.29`
+
+That tag triggers GitHub Actions to build the Windows `.exe` and macOS `.dmg` and upload them to the GitHub Release.
+
+If you *do* want to build installers locally (for testing), answer `y` when prompted.
 
 
 ## Troubleshooting
