@@ -100,14 +100,19 @@ function App() {
   }, [])
 
   const handleSearch = async (query) => {
+    const originalQuery = (query || '').trim()
+    const imdbMatch = originalQuery.match(/tt\d{7,8}/i)
+    const effectiveQuery = imdbMatch ? imdbMatch[0] : originalQuery
+
     setIsLoading(true)
     setResults([])
     setFiles([])
-    setCurrentQuery(query)
+    // Keep the full, user-visible string (e.g. "Title (Year) tt1234567") so saving/search history stays clear.
+    setCurrentQuery(originalQuery)
     setView('search')
     setStatusModal({ message: 'Searching P2P networks...', type: 'loading' })
     try {
-      const searchResults = await window.api.search(query)
+      const searchResults = await window.api.search(effectiveQuery)
       setResults(searchResults)
       if (searchResults.length === 0) {
         setStatusModal({ message: 'No results found.', type: 'error' })

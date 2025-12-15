@@ -55,12 +55,21 @@ const SearchBar = ({ onSearch, onSaveSearch, isLoading, currentQuery }) => {
   const handlePickSuggestion = (s) => {
     setShowSuggestions(false)
     setActiveIndex(-1)
-    // Show the picked title in the input, but search by IMDbID (e.g. tt1234567).
-    if (s?.title) {
-      setQuery(s.year ? `${s.title} (${s.year})` : s.title)
-    }
-    if (s?.imdbId) {
-      onSearch(s.imdbId)
+
+    // Store a user-friendly search string that still includes the IMDbID.
+    // App-level search logic will detect `tt...` and use only that for the actual search.
+    const display = [
+      s?.title || '',
+      s?.year ? `(${s.year})` : '',
+      s?.imdbId ? `[${s.imdbId}]` : ''
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .trim()
+
+    if (display) {
+      setQuery(display)
+      onSearch(display)
     }
   }
 
