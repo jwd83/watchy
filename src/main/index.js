@@ -5,6 +5,7 @@ import allDebrid from './services/allDebrid'
 import scraper from './services/scraper'
 import vlc from './services/vlc'
 import library from './services/library'
+import mediaCatalog from './services/mediaCatalog'
 
 const downloadTargets = new Map()
 
@@ -190,6 +191,10 @@ app.whenReady().then(() => {
   // API Handlers
   ipcMain.handle('api:search', async (_, query) => {
     return await scraper.search(query)
+  })
+
+  ipcMain.handle('api:mediaSuggest', (_, query, limit) => {
+    return mediaCatalog.suggest(query, limit)
   })
 
   ipcMain.handle('api:unlock', async (_, magnet) => {

@@ -11,6 +11,8 @@ files:
 extraResources:
   - from: build/icon.ico
     to: icon.ico
+  - from: media_catalog.db
+    to: media_catalog.db
 win:
   icon: build/icon.ico
   executableName: watchy

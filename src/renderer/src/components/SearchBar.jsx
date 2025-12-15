@@ -1,13 +1,95 @@
-import React, { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+
+const SUGGESTION_LIMIT = 8
 
 const SearchBar = ({ onSearch, onSaveSearch, isLoading, currentQuery }) => {
   const [query, setQuery] = useState('')
+  const [suggestions, setSuggestions] = useState([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [activeIndex, setActiveIndex] = useState(-1)
+  const [isSuggesting, setIsSuggesting] = useState(false)
+
+  const requestIdRef = useRef(0)
+  const blurTimeoutRef = useRef(null)
+
+  useEffect(() => {
+    if (blurTimeoutRef.current) {
+      clearTimeout(blurTimeoutRef.current)
+      blurTimeoutRef.current = null
+    }
+
+    const q = query.trim()
+    if (q.length < 2) {
+      setSuggestions([])
+      setActiveIndex(-1)
+      return
+    }
+
+    const id = ++requestIdRef.current
+    setIsSuggesting(true)
+
+    const timeout = setTimeout(async () => {
+      try {
+        const res = await window.api.mediaSuggest(q, SUGGESTION_LIMIT)
+        if (requestIdRef.current !== id) return
+        setSuggestions(Array.isArray(res) ? res : [])
+        setActiveIndex(-1)
+      } finally {
+        if (requestIdRef.current === id) setIsSuggesting(false)
+      }
+    }, 150)
+
+    return () => clearTimeout(timeout)
+  }, [query])
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    if (query.trim()) {
-      onSearch(query)
+    const q = query.trim()
+    if (q) {
+      setShowSuggestions(false)
+      setActiveIndex(-1)
+      onSearch(q)
     }
+  }
+
+  const handlePickSuggestion = (s) => {
+    setShowSuggestions(false)
+    setActiveIndex(-1)
+    // Show the picked title in the input, but search by IMDbID (e.g. tt1234567).
+    if (s?.title) {
+      setQuery(s.year ? `${s.title} (${s.year})` : s.title)
+    }
+    if (s?.imdbId) {
+      onSearch(s.imdbId)
+    }
+  }
+
+  const handleKeyDown = (e) => {
+    if (!showSuggestions || suggestions.length === 0) return
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setActiveIndex((i) => Math.min(i + 1, suggestions.length - 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setActiveIndex((i) => Math.max(i - 1, 0))
+    } else if (e.key === 'Enter') {
+      if (activeIndex >= 0 && suggestions[activeIndex]) {
+        e.preventDefault()
+        handlePickSuggestion(suggestions[activeIndex])
+      }
+    } else if (e.key === 'Escape') {
+      setShowSuggestions(false)
+      setActiveIndex(-1)
+    }
+  }
+
+  const handleBlur = () => {
+    // Allow click events on suggestions to fire before closing.
+    blurTimeoutRef.current = setTimeout(() => {
+      setShowSuggestions(false)
+      setActiveIndex(-1)
+    }, 120)
   }
 
   return (
@@ -16,11 +98,56 @@ const SearchBar = ({ onSearch, onSaveSearch, isLoading, currentQuery }) => {
         <input
           type="text"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => {
+            setQuery(e.target.value)
+            setShowSuggestions(true)
+          }}
+          onFocus={() => setShowSuggestions(true)}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
           placeholder="Search for movies, shows, or PBS broadcasts..."
           className="w-full px-6 py-4 text-lg bg-surface border border-gray-700 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent shadow-lg transition-all"
           disabled={isLoading}
+          autoComplete="off"
         />
+
+        {showSuggestions && (suggestions.length > 0 || isSuggesting) && (
+          <div className="absolute left-0 right-0 mt-2 bg-surface border border-gray-700 rounded-2xl shadow-xl overflow-hidden z-50">
+            {isSuggesting && suggestions.length === 0 ? (
+              <div className="px-4 py-3 text-sm text-gray-400">Searching catalog…</div>
+            ) : (
+              <ul className="max-h-80 overflow-auto">
+                {suggestions.map((s, idx) => (
+                  <li key={`${s.imdbId}-${idx}`}>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => handlePickSuggestion(s)}
+                      className={`w-full text-left px-4 py-3 flex items-start justify-between gap-4 hover:bg-gray-800 transition-colors ${
+                        idx === activeIndex ? 'bg-gray-800' : ''
+                      }`}
+                    >
+                      <div className="min-w-0">
+                        <div className="font-medium text-gray-100 truncate">
+                          {s.title}
+                          {s.year ? <span className="text-gray-400"> ({s.year})</span> : null}
+                        </div>
+                        <div className="text-xs text-gray-500 truncate">
+                          {s.type ? s.type : 'unknown'}
+                          {s.imdbId ? ` • ${s.imdbId}` : ''}
+                        </div>
+                      </div>
+                      <div className="text-xs text-gray-500 whitespace-nowrap">
+                        {typeof s.rating === 'number' && s.rating > 0 ? `★ ${s.rating}` : ''}
+                      </div>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
         <div className="absolute right-2 top-2 bottom-2 flex gap-2">
           {currentQuery && (
             <button
