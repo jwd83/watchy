@@ -21,7 +21,7 @@ npm start                # Preview built app
 npm run build            # Build for all platforms
 npm run build:mac        # Build for macOS
 npm run build:win        # Build for Windows
-npm run build:linux      # Build for Linux
+npm run build:linux      # Build for Linux (portable: AppImage)
 npm run build:unpack     # Build without packaging (faster for testing)
 ```
 

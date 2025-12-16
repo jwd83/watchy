@@ -33,6 +33,7 @@ jobs:
         os:
           - windows-latest
           - macos-latest
+          - ubuntu-latest
     env:
       RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || inputs.tag }}
     steps:
@@ -54,6 +55,9 @@ jobs:
       - name: Build (macOS)
         if: matrix.os == 'macos-latest'
         run: npm run build:mac -- --publish never
+      - name: Build (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: npm run build:linux -- --publish never
       - name: Upload Windows assets to GitHub Release
         if: matrix.os == 'windows-latest'
         uses: softprops/action-gh-release@v2
@@ -69,4 +73,12 @@ jobs:
           tag_name: ${{ env.RELEASE_TAG }}
           files: |
             dist/*.dmg
+          fail_on_unmatched_files: true
+      - name: Upload Linux assets to GitHub Release
+        if: matrix.os == 'ubuntu-latest'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          files: |
+            dist/*.AppImage
           fail_on_unmatched_files: true

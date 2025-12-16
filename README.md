@@ -1,6 +1,8 @@
 # Watchy
 
-**Watchy** allows you to search for P2P content, cache it using AllDebrid, stream or download it directly, and manage your personal library. 
+**Watchy** allows you to search for P2P content, cache it using AllDebrid, stream or download it directly, and manage your personal library.
+
+Linux builds are provided as an **AppImage** (recommended for most distros).
 
 ## Features
 
@@ -22,10 +24,20 @@ Before running Watchy, ensure you have the following:
 2.  **VLC Media Player**: Watchy relies on VLC for playback.
     - **macOS**: `/Applications/VLC.app`
     - **Windows**: `C:\Program Files\VideoLAN\VLC\vlc.exe`
+    - **Linux**: `vlc` must be available on your `PATH` (typically `/usr/bin/vlc`)
 
 ## Installation
 
-Visit our releases page. Mac users will need to run...
+Visit our releases page and download the artifact for your platform:
+
+- **Linux (recommended)**: Download the `.AppImage`, then:
+
+```bash
+chmod +x watchy-*-linux.AppImage
+./watchy-*-linux.AppImage
+```
+
+Mac users will need to run...
 
 ```bash
 sudo xattr -cr /Applications/watchy.app
@@ -55,9 +67,15 @@ By default, `builder.py` will:
 - (Optionally) bump the version and push the commit
 - Create and push a git tag like `v0.0.29`
 
-That tag triggers GitHub Actions to build the Windows `.exe` and macOS `.dmg` and upload them to the GitHub Release.
+That tag triggers GitHub Actions to build the Windows `.exe`, macOS `.dmg`, and the Linux `.AppImage`, and upload them to the GitHub Release.
 
 If you *do* want to build installers locally (for testing), answer `y` when prompted.
+
+On Linux, the default local build script produces an AppImage:
+
+```bash
+npm run build:linux
+```
 
 
 ## Troubleshooting

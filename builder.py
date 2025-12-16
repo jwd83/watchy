@@ -1,5 +1,6 @@
 import shutil
 import os
+import sys
 import json
 import subprocess
 
@@ -125,11 +126,14 @@ def change_version():
 
 
 def build():
-    if os.name == 'nt':
+    if sys.platform == 'win32':
         build_windows()
-
-    if os.name == 'posix':
+    elif sys.platform == 'darwin':
         build_macos()
+    elif sys.platform.startswith('linux'):
+        build_linux()
+    else:
+        print(f"Unsupported platform for local installer build: {sys.platform}")
 
 def clean_dist_folder():
     """Always start from a clean dist/ tree before building locally."""
@@ -198,6 +202,21 @@ def build_windows():
     dist_files = os.listdir('dist')
     for file in dist_files:
         if file.endswith('.exe'):
+            shutil.copy(os.path.join('dist', file), release_dir)
+            print(f"Copied {file} to {release_dir}/")
+
+
+def build_linux():
+    print("Building for Linux...")
+    os.system('npm run build:linux')
+
+    release_dir = os.path.join('dist', 'release')
+    os.makedirs(release_dir, exist_ok=True)
+
+    # copy the built Linux artifacts to dist/release/
+    dist_files = os.listdir('dist')
+    for file in dist_files:
+        if file.endswith('.AppImage'):
             shutil.copy(os.path.join('dist', file), release_dir)
             print(f"Copied {file} to {release_dir}/")
 

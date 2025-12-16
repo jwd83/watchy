@@ -62,10 +62,12 @@ class DownloadQueue {
 const downloadQueue = new DownloadQueue(3)
 
 function createWindow() {
-  // Icon path - dev uses build folder, prod uses extraResources
+  // Icon path - dev uses build folder, prod uses extraResources.
+  // Windows prefers .ico; Linux prefers .png.
+  const iconFile = process.platform === 'win32' ? 'icon.ico' : 'icon.png'
   const iconPath = is.dev
-    ? path.join(__dirname, '../../build/icon.ico')
-    : path.join(process.resourcesPath, 'icon.ico')
+    ? path.join(__dirname, `../../build/${iconFile}`)
+    : path.join(process.resourcesPath, iconFile)
 
   // Create native image from icon
   const appIcon = nativeImage.createFromPath(iconPath)

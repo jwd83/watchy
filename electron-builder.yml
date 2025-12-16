@@ -11,6 +11,8 @@ files:
 extraResources:
   - from: build/icon.ico
     to: icon.ico
+  - from: build/icon.png
+    to: icon.png
   - from: media_catalog.db
     to: media_catalog.db
 win:
@@ -30,6 +32,14 @@ mac:
   notarize: false
   target:
     - dmg
+linux:
+  icon: build/icon.png
+  category: Network
+  artifactName: ${name}-${version}-linux.${ext}
+  target:
+    - AppImage
+appImage:
+  artifactName: ${name}-${version}-linux.${ext}
 dmg:
   artifactName: ${name}-${version}-mac.${ext}
 npmRebuild: false
