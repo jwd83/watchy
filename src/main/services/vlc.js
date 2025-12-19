@@ -36,7 +36,7 @@ class VLCService {
     console.log('Opening VLC with URL:', url)
 
     let command = 'vlc'
-    const args = [url]
+    const args = ['--fullscreen', '--no-video-title-show', url]
 
     if (process.platform === 'darwin') {
       command = '/Applications/VLC.app/Contents/MacOS/VLC'
@@ -45,7 +45,6 @@ class VLCService {
     }
 
     const vlcProcess = spawn(command, args, {
-      windowsHide: true,
       detached: true,
       stdio: 'ignore'
     })
