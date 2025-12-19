@@ -110,14 +110,15 @@ def change_version():
     # --no-git-tag-version: builder.py controls tagging separately.
     print(f"Running: npm version {new_version} --no-git-tag-version")
 
-    # NOTE: Don't use shell=True with an argv list; it can behave differently across platforms.
-    # Run npm directly so errors/exit codes propagate correctly.
+    # NOTE: On Windows, npm is a .cmd file, so we need shell=True to locate it.
+    # On Unix, npm is typically a direct executable.
     try:
         subprocess.run(
             ['npm', 'version', new_version, '--no-git-tag-version'],
             capture_output=True,
             text=True,
             check=True,
+            shell=True,
         )
     except subprocess.CalledProcessError as e:
         print(f"npm version failed (exit {e.returncode}); aborting version change.")
