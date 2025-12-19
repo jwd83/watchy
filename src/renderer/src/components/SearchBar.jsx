@@ -2,6 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 
 const SUGGESTION_LIMIT = 8
 
+const formatRuntime = (runtime) => {
+  const n = Number(runtime)
+  if (!Number.isFinite(n) || n <= 0) return ''
+  return `${Math.round(n)} min`
+}
+
 const SearchBar = ({ onSearch, onSaveSearch, isLoading, currentQuery }) => {
   const [query, setQuery] = useState('')
   const [suggestions, setSuggestions] = useState([])
@@ -143,6 +149,8 @@ const SearchBar = ({ onSearch, onSaveSearch, isLoading, currentQuery }) => {
                         </div>
                         <div className="text-xs text-gray-500 truncate">
                           {s.type ? s.type : 'unknown'}
+                          {s.primaryGenre ? ` • ${s.primaryGenre}` : ''}
+                          {s.runtime ? ` • ${formatRuntime(s.runtime)}` : ''}
                           {s.imdbId ? ` • ${s.imdbId}` : ''}
                         </div>
                       </div>

@@ -54,12 +54,14 @@ function getDb() {
 
   suggestStmt = db.prepare(`
     SELECT
-      Title  AS title,
-      Year   AS year,
-      IMDbID AS imdbId,
-      Type   AS type,
-      Rating AS rating,
-      Votes  AS votes
+      Title         AS title,
+      Year          AS year,
+      IMDbID        AS imdbId,
+      Type          AS type,
+      primary_genre AS primaryGenre,
+      runtime       AS runtime,
+      Rating        AS rating,
+      Votes         AS votes
     FROM media_catalog
     WHERE
       Title LIKE ? ESCAPE '\\' COLLATE NOCASE
