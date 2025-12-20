@@ -20,7 +20,8 @@ def main():
     # Default flow: do NOT build installers locally. Instead, push a git tag
     # (v<version>) to trigger GitHub Actions, which will build and attach the
     # installers to the GitHub Release.
-    build_local = input("Build installers locally on this machine? (y/n): ").strip().lower()
+    # Default to **no** for local installer builds; CI builds are the primary path.
+    build_local = input("Build installers locally on this machine? (y/N): ").strip().lower()
     if build_local == 'y':
         clean_dist_folder()
         build()
