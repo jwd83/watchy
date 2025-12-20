@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useMemo, useState } from 'react'
 
 const Library = ({
   savedSearches,
@@ -8,16 +8,61 @@ const Library = ({
   onRemoveSearch,
   onRemoveMagnet
 }) => {
+  const [filter, setFilter] = useState('')
+
+  const normalizedFilter = filter.trim().toLowerCase()
+
+  const sortedSavedSearches = useMemo(
+    () =>
+      [...savedSearches].sort((a, b) =>
+        a.query.localeCompare(b.query, undefined, { sensitivity: 'base' })
+      ),
+    [savedSearches]
+  )
+
+  const sortedSavedMagnets = useMemo(
+    () =>
+      [...savedMagnets].sort((a, b) =>
+        (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base' })
+      ),
+    [savedMagnets]
+  )
+
+  const filteredSearches = normalizedFilter
+    ? sortedSavedSearches.filter((s) =>
+        s.query.toLowerCase().includes(normalizedFilter)
+      )
+    : sortedSavedSearches
+
+  const filteredMagnets = normalizedFilter
+    ? sortedSavedMagnets.filter((item) =>
+        (item.title && item.title.toLowerCase().includes(normalizedFilter))
+      )
+    : sortedSavedMagnets
+
   return (
     <div className="space-y-8">
+      {/* Library filter */}
+      <div className="flex justify-end">
+        <input
+          type="text"
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          placeholder="Filter saved searches and library..."
+          className="w-full max-w-sm px-4 py-2 mb-2 bg-surface border border-gray-700 rounded-full text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+        />
+      </div>
+
       {/* Saved Searches */}
       <div>
         <h2 className="text-2xl font-bold mb-4 text-white">Saved Searches</h2>
         {savedSearches.length === 0 ? (
           <p className="text-gray-400 text-center py-8">No saved searches yet</p>
+        ) : filteredSearches.length === 0 ? (
+          <p className="text-gray-400 text-center py-8">No searches match your filter</p>
         ) : (
           <div className="grid gap-3">
-            {savedSearches.map((search) => (
+            {filteredSearches.map((search) => (
               <div
                 key={search.id}
                 className="bg-surface p-4 rounded-xl border border-gray-700 hover:border-primary transition-all group flex justify-between items-center"
@@ -59,9 +104,11 @@ const Library = ({
         <h2 className="text-2xl font-bold mb-4 text-white">My Library</h2>
         {savedMagnets.length === 0 ? (
           <p className="text-gray-400 text-center py-8">No saved items yet</p>
+        ) : filteredMagnets.length === 0 ? (
+          <p className="text-gray-400 text-center py-8">No items match your filter</p>
         ) : (
           <div className="grid gap-3">
-            {savedMagnets.map((item) => (
+            {filteredMagnets.map((item) => (
               <div
                 key={item.id}
                 className="bg-surface p-4 rounded-xl border border-gray-700 hover:border-primary transition-all group"
