@@ -165,8 +165,17 @@ const SearchBar = ({ onSearch, onSaveSearch, isLoading, currentQuery }) => {
                           {s.imdbId ? ` • ${s.imdbId}` : ''}
                         </div>
                       </div>
-                      <div className="text-sm text-gray-400 whitespace-nowrap">
-                        {typeof s.rating === 'number' && s.rating > 0 ? `★ ${s.rating}` : ''}
+                      <div className="flex flex-col items-end text-gray-400 whitespace-nowrap">
+                        {typeof s.rating === 'number' && s.rating > 0 && (
+                          <>
+                            <div className="text-base">
+                              <span className="text-yellow-400">★</span> {s.rating}
+                            </div>
+                            {typeof s.votes === 'number' && s.votes > 0 && (
+                              <div className="text-xs text-gray-500">{s.votes.toLocaleString()} votes</div>
+                            )}
+                          </>
+                        )}
                       </div>
                     </button>
                   </li>
