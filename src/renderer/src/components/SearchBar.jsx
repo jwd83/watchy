@@ -88,6 +88,14 @@ const SearchBar = ({ onSearch, onSaveSearch, isLoading, currentQuery }) => {
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
       setActiveIndex((i) => Math.max(i - 1, 0))
+    } else if (e.key === 'Tab') {
+      // Navigate through suggestions with Tab
+      e.preventDefault()
+      if (e.shiftKey) {
+        setActiveIndex((i) => (i <= 0 ? suggestions.length - 1 : i - 1))
+      } else {
+        setActiveIndex((i) => (i >= suggestions.length - 1 ? 0 : i + 1))
+      }
     } else if (e.key === 'Enter') {
       if (activeIndex >= 0 && suggestions[activeIndex]) {
         e.preventDefault()
@@ -137,9 +145,12 @@ const SearchBar = ({ onSearch, onSaveSearch, isLoading, currentQuery }) => {
                     <button
                       type="button"
                       onMouseDown={(e) => e.preventDefault()}
+                      onMouseEnter={() => setActiveIndex(idx)}
                       onClick={() => handlePickSuggestion(s)}
-                      className={`w-full text-left px-4 py-3 flex items-start justify-between gap-4 hover:bg-gray-800 transition-colors ${
-                        idx === activeIndex ? 'bg-gray-800' : ''
+                      className={`w-full text-left px-4 py-3 flex items-start justify-between gap-4 transition-all duration-150 ${
+                        idx === activeIndex
+                          ? 'bg-primary/20 border-l-2 border-primary shadow-sm'
+                          : 'hover:bg-gray-800/60 border-l-2 border-transparent'
                       }`}
                     >
                       <div className="min-w-0">
