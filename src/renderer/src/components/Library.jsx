@@ -53,52 +53,6 @@ const Library = ({
         />
       </div>
 
-      {/* Saved Searches */}
-      <div>
-        <h2 className="text-2xl font-bold mb-4 text-white">Saved Searches</h2>
-        {savedSearches.length === 0 ? (
-          <p className="text-gray-400 text-center py-8">No saved searches yet</p>
-        ) : filteredSearches.length === 0 ? (
-          <p className="text-gray-400 text-center py-8">No searches match your filter</p>
-        ) : (
-          <div className="grid gap-3">
-            {filteredSearches.map((search) => (
-              <div
-                key={search.id}
-                className="bg-surface p-4 rounded-xl border border-gray-700 hover:border-primary transition-all group flex justify-between items-center"
-              >
-                <button onClick={() => onSearchSelect(search.query)} className="flex-1 text-left">
-                  <div className="text-lg group-hover:text-primary transition-colors">
-                    {search.query}
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    Saved {new Date(search.savedAt).toLocaleDateString()}
-                  </div>
-                </button>
-                <button
-                  onClick={() => onRemoveSearch(search.id)}
-                  className="ml-4 p-2 text-gray-400 hover:text-red-500 transition-colors"
-                  title="Remove"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
       {/* Saved Magnets */}
       <div>
         <h2 className="text-2xl font-bold mb-4 text-white">My Library</h2>
@@ -151,6 +105,52 @@ const Library = ({
                     </svg>
                   </button>
                 </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Saved Searches */}
+      <div>
+        <h2 className="text-2xl font-bold mb-4 text-white">Saved Searches</h2>
+        {savedSearches.length === 0 ? (
+          <p className="text-gray-400 text-center py-8">No saved searches yet</p>
+        ) : filteredSearches.length === 0 ? (
+          <p className="text-gray-400 text-center py-8">No searches match your filter</p>
+        ) : (
+          <div className="grid gap-3">
+            {filteredSearches.map((search) => (
+              <div
+                key={search.id}
+                className="bg-surface p-4 rounded-xl border border-gray-700 hover:border-primary transition-all group flex justify-between items-center"
+              >
+                <button onClick={() => onSearchSelect(search.query)} className="flex-1 text-left">
+                  <div className="text-lg group-hover:text-primary transition-colors">
+                    {search.query}
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    Saved {new Date(search.savedAt).toLocaleDateString()}
+                  </div>
+                </button>
+                <button
+                  onClick={() => onRemoveSearch(search.id)}
+                  className="ml-4 p-2 text-gray-400 hover:text-red-500 transition-colors"
+                  title="Remove"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </button>
               </div>
             ))}
           </div>
