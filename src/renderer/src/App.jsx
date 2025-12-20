@@ -8,6 +8,7 @@ import History from './components/History'
 import Toast from './components/Toast'
 import DownloadManager from './components/DownloadManager'
 import StatusModal from './components/StatusModal'
+import logo from './assets/logo.png'
 
 function App() {
   const [results, setResults] = useState([])
@@ -368,9 +369,12 @@ function App() {
         }`}
       >
         <div className="max-w-7xl mx-auto px-8 pb-4 pt-2 flex justify-between items-center">
-          <h1 className="text-4xl font-black bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            Watchy
-          </h1>
+          <div className="flex items-center gap-3">
+            <img src={logo} alt="Watchy logo" className="w-10 h-10" />
+            <h1 className="text-4xl font-black bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              Watchy
+            </h1>
+          </div>
           <div className="flex gap-4 items-center">
             <button
               onClick={() => setView('search')}
