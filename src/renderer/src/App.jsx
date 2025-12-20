@@ -27,6 +27,7 @@ function App() {
   const [activeDownloads, setActiveDownloads] = useState([])
   const [isDownloadModalDismissed, setIsDownloadModalDismissed] = useState(false)
   const [downloadHistory, setDownloadHistory] = useState([])
+  const [currentMediaCatalogTitle, setCurrentMediaCatalogTitle] = useState(null)
 
   const viewRef = useRef(view)
   useEffect(() => {
@@ -105,6 +106,19 @@ function App() {
     const imdbMatch = originalQuery.match(/tt\d{7,8}/i)
     const effectiveQuery = imdbMatch ? imdbMatch[0] : originalQuery
 
+    // Resolve canonical media catalog title for this search when an IMDb ID is present.
+    if (imdbMatch) {
+      try {
+        const suggestions = await window.api.mediaSuggest(effectiveQuery, 1)
+        const first = Array.isArray(suggestions) && suggestions[0] ? suggestions[0] : null
+        setCurrentMediaCatalogTitle(first ? first.title : null)
+      } catch {
+        setCurrentMediaCatalogTitle(null)
+      }
+    } else {
+      setCurrentMediaCatalogTitle(null)
+    }
+
     setIsLoading(true)
     setResults([])
     setFiles([])
@@ -145,13 +159,20 @@ function App() {
   }
 
   const handleSaveMagnet = async (result) => {
+    // Attempt to associate this magnet with an IMDb ID based on the current search query.
+    const imdbMatch = (currentQuery || '').match(/tt\d{7,8}/i)
+    const imdbId = imdbMatch ? imdbMatch[0] : null
+
     const magnetData = {
       title: result.title,
       magnet: result.magnet,
       size: result.size,
       seeds: result.seeds,
-      leeches: result.leeches
+      leeches: result.leeches,
+      imdbId,
+      canonicalTitle: currentMediaCatalogTitle || null
     }
+
     const response = await window.api.addSavedMagnet(magnetData)
     if (response.success) {
       showToast(response.message)
@@ -549,6 +570,7 @@ function App() {
                   <ResultCard
                     key={index}
                     result={result}
+                    canonicalTitle={currentMediaCatalogTitle}
                     onSelect={handleSelectResult}
                     onSave={handleSaveMagnet}
                   />

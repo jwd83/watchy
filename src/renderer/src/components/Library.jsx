@@ -23,9 +23,11 @@ const Library = ({
 
   const sortedSavedMagnets = useMemo(
     () =>
-      [...savedMagnets].sort((a, b) =>
-        (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base' })
-      ),
+      [...savedMagnets].sort((a, b) => {
+        const aTitle = a.canonicalTitle || a.title || ''
+        const bTitle = b.canonicalTitle || b.title || ''
+        return aTitle.localeCompare(bTitle, undefined, { sensitivity: 'base' })
+      }),
     [savedMagnets]
   )
 
@@ -36,9 +38,10 @@ const Library = ({
     : sortedSavedSearches
 
   const filteredMagnets = normalizedFilter
-    ? sortedSavedMagnets.filter((item) =>
-        (item.title && item.title.toLowerCase().includes(normalizedFilter))
-      )
+    ? sortedSavedMagnets.filter((item) => {
+        const haystack = `${item.canonicalTitle || ''} ${item.title || ''}`.toLowerCase()
+        return haystack.includes(normalizedFilter)
+      })
     : sortedSavedMagnets
 
   return (
@@ -95,51 +98,64 @@ const Library = ({
             <p className="text-gray-400 text-center py-8">No items match your filter</p>
           ) : (
             <div className="grid gap-3">
-              {filteredMagnets.map((item) => (
-                <div
-                  key={item.id}
-                  className="bg-surface p-4 rounded-xl border border-gray-700 hover:border-primary transition-all group"
-                >
-                  <div className="flex justify-between items-start">
-                    <button onClick={() => onMagnetSelect(item)} className="flex-1 text-left">
-                      <h3
-                        className="text-lg font-semibold mb-2 group-hover:text-primary transition-colors truncate"
-                        title={item.title}
-                      >
-                        {item.title}
-                      </h3>
-                      <div className="flex justify-between text-sm text-gray-400">
-                        <div className="flex gap-4">
-                          <span className="text-green-400">↑ {item.seeds}</span>
-                          <span className="text-red-400">↓ {item.leeches}</span>
+              {filteredMagnets.map((item) => {
+                const primaryTitle = item.canonicalTitle || item.title
+                const subtitle = item.canonicalTitle ? item.title : null
+
+                return (
+                  <div
+                    key={item.id}
+                    className="bg-surface p-4 rounded-xl border border-gray-700 hover:border-primary transition-all group"
+                  >
+                    <div className="flex justify-between items-start">
+                      <button onClick={() => onMagnetSelect(item)} className="flex-1 text-left">
+                        <h3
+                          className="text-lg font-semibold mb-1 group-hover:text-primary transition-colors truncate"
+                          title={primaryTitle}
+                        >
+                          {primaryTitle}
+                        </h3>
+                        {subtitle && (
+                          <div className="text-xs text-gray-400 mb-1 truncate" title={subtitle}>
+                            {subtitle}
+                          </div>
+                        )}
+                        <div className="flex justify-between text-sm text-gray-400">
+                          <div className="flex gap-4">
+                            <span className="text-green-400">↑ {item.seeds}</span>
+                            <span className="text-red-400">↓ {item.leeches}</span>
+                          </div>
+                          <span>{item.size}</span>
                         </div>
-                        <span>{item.size}</span>
-                      </div>
-                      <div className="text-xs text-gray-500 mt-2">
-                        Added {new Date(item.savedAt).toLocaleDateString()}
-                      </div>
-                    </button>
-                    <button
-                      onClick={() => onRemoveMagnet(item.id)}
-                      className="ml-4 p-2 text-gray-400 hover:text-red-500 transition-colors"
-                      title="Remove from library"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
+                        <div className="text-xs text-gray-500 mt-2 flex items-center gap-2">
+                          {item.imdbId && (
+                            <span className="text-[0.65rem] text-gray-400">{item.imdbId}</span>
+                          )}
+                          <span>Added {new Date(item.savedAt).toLocaleDateString()}</span>
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => onRemoveMagnet(item.id)}
+                        className="ml-4 p-2 text-gray-400 hover:text-red-500 transition-colors"
+                        title="Remove from library"
                       >
-                        <path
-                          fillRule="evenodd"
-                          d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    </button>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-5 w-5"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>

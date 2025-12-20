@@ -54,15 +54,23 @@ class LibraryService {
     if (existing) {
       return { success: false, message: 'Already in library' }
     }
+
+    const now = new Date().toISOString()
+
     magnets.unshift({
       id: Date.now().toString(),
+      // Magnet/display name as originally returned from search/API.
       title: magnetData.title,
       magnet: magnetData.magnet,
       size: magnetData.size,
       seeds: magnetData.seeds,
       leeches: magnetData.leeches,
-      savedAt: new Date().toISOString()
+      savedAt: now,
+      // Optional media catalog metadata, if provided.
+      imdbId: magnetData.imdbId || null,
+      canonicalTitle: magnetData.canonicalTitle || null
     })
+
     store.set('savedMagnets', magnets)
     return { success: true, message: 'Added to library' }
   }

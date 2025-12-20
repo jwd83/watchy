@@ -1,13 +1,21 @@
 import React from 'react'
 
-const ResultCard = ({ result, onSelect, onSave }) => {
+const ResultCard = ({ result, canonicalTitle, onSelect, onSave }) => {
+  const primaryTitle = canonicalTitle || result.title
+  const subtitle = canonicalTitle ? result.title : null
+
   return (
     <div className="bg-surface p-4 rounded-xl border border-gray-700 hover:border-primary hover:bg-gray-700/50 transition-all hover:shadow-xl group">
       <div className="flex items-start gap-4">
         <button onClick={() => onSelect(result)} className="flex-1 min-w-0 text-left">
-          <h3 className="text-lg font-semibold mb-2 group-hover:text-primary" title={result.title}>
-            {result.title}
+          <h3 className="text-lg font-semibold mb-1 group-hover:text-primary truncate" title={primaryTitle}>
+            {primaryTitle}
           </h3>
+          {subtitle && (
+            <div className="text-xs text-gray-400 mb-1 truncate" title={subtitle}>
+              {subtitle}
+            </div>
+          )}
           <div className="flex justify-between text-sm text-gray-400">
             <div className="flex gap-4">
               <span className="text-green-400">↑ {result.seeds}</span>
