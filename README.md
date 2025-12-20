@@ -1,17 +1,18 @@
+<p align="center">
+<img src="src/renderer/src/assets/logo.png" alt="Watchy Logo" width="200">
+</p>
+
 # Watchy
 
-**Watchy** allows you to search for P2P content, cache it using AllDebrid, stream or download it directly, and manage your personal library.
-
-Linux builds are provided as an **AppImage** (recommended for most distros).
+**Watchy** allows you to search for P2P content, cache it using AllDebrid, stream or download it directly, and manage your personal library of favorite searches and magnets.
 
 ## Features
 
 - **Integrated Search**: Search P2P networks directly from the app.
 - **Instant Caching**: Automatically uploads magnet links to AllDebrid for high-speed caching.
-- **Direct Streaming**: Unlocks video files and streams them directly to VLC Media Player.
+- **Direct Streaming**: Unlocks AllDebrid video files and streams them directly to VLC Media Player.
 - **Download Support**: Download unlocked files directly to your device.
-- **Downloads Tab**: A dedicated tab for managing your downloads.
-- **Personal Library**: Save your favorite searches and magnet links for quick access.
+- **Personal Library**: Build a library of your library  your favorite searches and magnet links.
 - **Play History**: Track your watched content with file-level resume functionality.
 - **Modern UI**: A sleek, responsive interface designed for a premium user experience.
 
@@ -28,7 +29,10 @@ Before running Watchy, ensure you have the following:
 
 ## Installation
 
-Visit our releases page and download the artifact for your platform:
+Visit our releases page and download the app for your platform:
+
+- **Windows**: Download the `.exe` NSIS installer and run it.
+
 
 - **Linux (recommended)**: Download the `.AppImage`, then:
 
@@ -90,3 +94,19 @@ sudo xattr -cr /Applications/watchy.app
 ```
 
 ...or adjust to wherever you have watchy installed.
+
+### LICENSE
+
+   Copyright 2025 Jared De Blander
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License. 
