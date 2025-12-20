@@ -22,7 +22,7 @@ function App() {
   const [savedMagnets, setSavedMagnets] = useState([])
   const [history, setHistory] = useState([])
   const [toast, setToast] = useState(null)
-  const [currentMagnet, setCurrentMagnet] = useState(null) // { hash, title }
+  const [currentMagnet, setCurrentMagnet] = useState(null) // { hash, title, magnet, size, seeds, leeches }
   const [isNavStuck, setIsNavStuck] = useState(false)
   const [activeDownloads, setActiveDownloads] = useState([])
   const [isDownloadModalDismissed, setIsDownloadModalDismissed] = useState(false)
@@ -172,9 +172,16 @@ function App() {
     setView('search') // Switch to search view to show files
     setStatusModal({ message: `Unlocking \"${result.title}\"...`, type: 'loading' })
 
-    // Store current magnet context for history tracking
+    // Store current magnet context for history tracking and favorites
     const hash = extractMagnetHash(result.magnet)
-    setCurrentMagnet({ hash, title: result.title })
+    setCurrentMagnet({
+      hash,
+      title: result.title,
+      magnet: result.magnet,
+      size: result.size,
+      seeds: result.seeds,
+      leeches: result.leeches
+    })
 
     try {
       // 1) Fast path: if we've seen this magnet before, try its saved id.
@@ -532,6 +539,8 @@ function App() {
                           ?.files.map((f) => f.filename) || []
                       : []
                   }
+                  onSave={handleSaveMagnet}
+                  magnetData={currentMagnet}
                 />
               </div>
             ) : (

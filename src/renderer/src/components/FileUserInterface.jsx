@@ -1,4 +1,4 @@
-const FileUserInterface = ({ files, onPlay, watchedFiles = [] }) => {
+const FileUserInterface = ({ files, onPlay, watchedFiles = [], onSave, magnetData }) => {
   const basename = (p) => {
     if (!p) return ''
     const s = String(p)
@@ -34,7 +34,26 @@ const FileUserInterface = ({ files, onPlay, watchedFiles = [] }) => {
 
   return (
     <div className="mt-8 bg-surface rounded-xl p-6 border border-gray-700">
-      <h2 className="text-xl font-bold mb-4">Available Files</h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-bold">Available Files</h2>
+        {onSave && magnetData && (
+          <button
+            onClick={() => onSave(magnetData)}
+            className="flex items-center gap-2 px-4 py-2 text-gray-400 hover:text-primary hover:bg-gray-700 transition-colors rounded-lg border border-gray-600"
+            title="Add to library"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+            </svg>
+            Add to Library
+          </button>
+        )}
+      </div>
       {videoFiles.length === 0 ? (
         <p className="text-gray-400">No video files found in this torrent.</p>
       ) : (
