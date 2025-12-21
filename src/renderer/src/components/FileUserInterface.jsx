@@ -96,7 +96,10 @@ const FileUserInterface = ({ files, onPlay, watchedFiles = [], onSave, magnetDat
                     const ext = file.filename.split('.').pop().toLowerCase()
                     if (['mp4', 'mkv', 'avi', 'mov', 'wmv'].includes(ext)) {
                       const url = await resolveLink(file.link)
-                      window.api.download(url, { directory: folder })
+                      window.api.download(url, {
+                        directory: folder,
+                        magnetTitle: magnetData?.title
+                      })
                     }
                   }
                 }
@@ -143,7 +146,10 @@ const FileUserInterface = ({ files, onPlay, watchedFiles = [], onSave, magnetDat
                       />
                     </svg>
                   )}
-                  <span className={`truncate ${watched ? 'text-gray-400' : ''}`} title={file.filename}>
+                  <span
+                    className={`truncate ${watched ? 'text-gray-400' : ''}`}
+                    title={file.filename}
+                  >
                     {basename(file.filename)}
                   </span>
                 </div>
@@ -157,7 +163,7 @@ const FileUserInterface = ({ files, onPlay, watchedFiles = [], onSave, magnetDat
                   <button
                     onClick={async () => {
                       const url = await resolveLink(file.link)
-                      window.api.download(url)
+                      window.api.download(url, { magnetTitle: magnetData?.title })
                     }}
                     className="px-4 py-2 bg-surface hover:bg-gray-700 text-white rounded-lg text-sm font-medium transition-colors border border-gray-600 flex items-center gap-2 whitespace-nowrap"
                     title="Download File"

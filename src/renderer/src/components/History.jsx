@@ -1,5 +1,3 @@
-import React from 'react'
-
 const basename = (p) => {
   if (!p) return ''
   const s = String(p)

@@ -8,6 +8,7 @@ import library from './services/library'
 import mediaCatalog from './services/mediaCatalog'
 
 const downloadTargets = new Map()
+const downloadMetadata = new Map() // url -> { magnetTitle }
 
 // Download queue manager
 class DownloadQueue {
@@ -24,37 +25,43 @@ class DownloadQueue {
 
   add(url, options, sender) {
     const filename = decodeURIComponent(url.split('/').pop().split('?')[0] || 'unknown')
-    this.queue.push({ url, options, sender, filename })
-    
+    const magnetTitle = options.magnetTitle || null
+    this.queue.push({ url, options, sender, filename, magnetTitle })
+
     // Notify renderer about queued download
     if (this.mainWindow) {
       this.mainWindow.webContents.send('download:progress', {
         filename,
+        magnetTitle,
         state: 'queued',
         queuePosition: this.queue.length
       })
     }
-    
+
     this.processQueue()
   }
 
   processQueue() {
     while (this.activeDownloads.size < this.maxConcurrent && this.queue.length > 0) {
-      const { url, options, sender } = this.queue.shift()
-      this.startDownload(url, options, sender)
+      const { url, options, sender, magnetTitle } = this.queue.shift()
+      this.startDownload(url, options, sender, magnetTitle)
     }
   }
 
-  startDownload(url, options, sender) {
+  startDownload(url, options, sender, magnetTitle) {
     this.activeDownloads.add(url)
     if (options.directory) {
       downloadTargets.set(url, options.directory)
+    }
+    if (magnetTitle) {
+      downloadMetadata.set(url, { magnetTitle })
     }
     sender.downloadURL(url)
   }
 
   onDownloadComplete(url) {
     this.activeDownloads.delete(url)
+    downloadMetadata.delete(url)
     this.processQueue()
   }
 }
@@ -112,6 +119,9 @@ function createWindow() {
   // Track downloads
   mainWindow.webContents.session.on('will-download', (event, item) => {
     const url = item.getURL()
+    const metadata = downloadMetadata.get(url) || {}
+    const magnetTitle = metadata.magnetTitle || null
+
     if (downloadTargets.has(url)) {
       const directory = downloadTargets.get(url)
       const filename = item.getFilename()
@@ -130,6 +140,7 @@ function createWindow() {
           // Send progress to renderer
           mainWindow.webContents.send('download:progress', {
             filename: decodeURIComponent(item.getFilename()),
+            magnetTitle,
             receivedBytes: item.getReceivedBytes(),
             totalBytes: item.getTotalBytes(),
             savePath: item.getSavePath(),
@@ -143,6 +154,7 @@ function createWindow() {
       const itemUrl = item.getURL()
       const downloadData = {
         filename: decodeURIComponent(item.getFilename()),
+        magnetTitle,
         savePath: item.getSavePath(),
         state: state === 'completed' ? 'completed' : 'failed',
         receivedBytes: item.getReceivedBytes(),
@@ -155,8 +167,10 @@ function createWindow() {
         console.log(`Download failed: ${state}`)
       }
 
-      // Add to download history
-      library.addToDownloadHistory(downloadData)
+      // Add to download history (only if magnetTitle is present)
+      if (magnetTitle) {
+        library.addToDownloadHistory(downloadData)
+      }
 
       mainWindow.webContents.send('download:progress', downloadData)
       // Notify queue that download is complete so next can start

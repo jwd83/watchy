@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 
 const Library = ({
   savedSearches,
@@ -32,9 +32,7 @@ const Library = ({
   )
 
   const filteredSearches = normalizedFilter
-    ? sortedSavedSearches.filter((s) =>
-        s.query.toLowerCase().includes(normalizedFilter)
-      )
+    ? sortedSavedSearches.filter((s) => s.query.toLowerCase().includes(normalizedFilter))
     : sortedSavedSearches
 
   const filteredMagnets = normalizedFilter
@@ -53,9 +51,7 @@ const Library = ({
             type="button"
             onClick={() => setActiveTab('library')}
             className={`px-4 py-1.5 text-sm rounded-full transition-colors ${
-              activeTab === 'library'
-                ? 'bg-primary text-black'
-                : 'text-gray-300 hover:text-white'
+              activeTab === 'library' ? 'bg-primary text-black' : 'text-gray-300 hover:text-white'
             }`}
           >
             My Library
@@ -64,9 +60,7 @@ const Library = ({
             type="button"
             onClick={() => setActiveTab('searches')}
             className={`px-4 py-1.5 text-sm rounded-full transition-colors ${
-              activeTab === 'searches'
-                ? 'bg-primary text-black'
-                : 'text-gray-300 hover:text-white'
+              activeTab === 'searches' ? 'bg-primary text-black' : 'text-gray-300 hover:text-white'
             }`}
           >
             Saved Searches
@@ -79,11 +73,7 @@ const Library = ({
             type="text"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            placeholder={
-              activeTab === 'library'
-                ? 'Filter library...'
-                : 'Filter saved searches...'
-            }
+            placeholder={activeTab === 'library' ? 'Filter library...' : 'Filter saved searches...'}
             className="w-full max-w-sm px-4 py-2 bg-surface border border-gray-700 rounded-full text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
           />
         </div>

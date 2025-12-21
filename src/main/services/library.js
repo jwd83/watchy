@@ -175,7 +175,13 @@ class LibraryService {
 
   // Download History Management
   getDownloadHistory() {
-    return store.get('downloadHistory', [])
+    const history = store.get('downloadHistory', [])
+    // Filter out old-style entries that don't have magnetTitle
+    const filtered = history.filter((h) => h.magnetTitle)
+    if (filtered.length !== history.length) {
+      store.set('downloadHistory', filtered)
+    }
+    return filtered
   }
 
   addToDownloadHistory(downloadData) {
@@ -183,6 +189,7 @@ class LibraryService {
     const historyEntry = {
       id: Date.now().toString(),
       filename: downloadData.filename,
+      magnetTitle: downloadData.magnetTitle || null,
       state: downloadData.state,
       savePath: downloadData.savePath || null,
       receivedBytes: downloadData.receivedBytes || 0,
@@ -190,7 +197,12 @@ class LibraryService {
       completedAt: new Date().toISOString(),
       originalState: downloadData.state // Store the original state (completed/failed)
     }
-    
+
+    // Skip entries without magnetTitle (old-style)
+    if (!historyEntry.magnetTitle) {
+      return { success: false, message: 'Missing magnetTitle' }
+    }
+
     history.unshift(historyEntry)
     store.set('downloadHistory', history)
     return { success: true }

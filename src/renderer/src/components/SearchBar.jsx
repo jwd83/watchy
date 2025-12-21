@@ -64,11 +64,7 @@ const SearchBar = ({ onSearch, onSaveSearch, isLoading, currentQuery }) => {
 
     // Store a user-friendly search string that still includes the IMDbID.
     // App-level search logic will detect `tt...` and use only that for the actual search.
-    const display = [
-      s?.title || '',
-      s?.year ? `(${s.year})` : '',
-      s?.imdbId ? `[${s.imdbId}]` : ''
-    ]
+    const display = [s?.title || '', s?.year ? `(${s.year})` : '', s?.imdbId ? `[${s.imdbId}]` : '']
       .filter(Boolean)
       .join(' ')
       .trim()
@@ -172,7 +168,9 @@ const SearchBar = ({ onSearch, onSaveSearch, isLoading, currentQuery }) => {
                               <span className="text-yellow-400">★</span> {s.rating}
                             </div>
                             {typeof s.votes === 'number' && s.votes > 0 && (
-                              <div className="text-xs text-gray-500">{s.votes.toLocaleString()} votes</div>
+                              <div className="text-xs text-gray-500">
+                                {s.votes.toLocaleString()} votes
+                              </div>
                             )}
                           </>
                         )}

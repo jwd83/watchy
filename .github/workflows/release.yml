@@ -2,11 +2,11 @@ name: build-installers
 on:
   push:
     tags:
-      - "v*"
+      - 'v*'
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag to build (e.g. v0.0.29)"
+        description: 'Tag to build (e.g. v0.0.29)'
         required: true
         type: string
 permissions:

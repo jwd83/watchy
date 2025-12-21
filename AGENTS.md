@@ -97,6 +97,7 @@ Services are singleton instances in `src/main/services/`:
 - IPC: exposed via `api:mediaSuggest` → `window.api.mediaSuggest(query, limit)`
 
 Notes on IMDbID searches:
+
 - When a suggestion is chosen, the UI formats queries like: `Some Title (2024) [tt1234567]`
 - `App.handleSearch()` will detect `tt\d{7,8}` anywhere in the query string and perform the actual P2P search using only the `tt...` token, while keeping the full string for saving/history clarity.
 

@@ -1,8 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
 
-const DownloadManager = ({ downloads, variant = 'overlay', hidden = false, onDismiss, downloadHistory = [], onRemoveFromHistory, onClearHistory }) => {
+const DownloadManager = ({
+  downloads,
+  variant = 'overlay',
+  hidden = false,
+  onDismiss,
+  downloadHistory = [],
+  onRemoveFromHistory,
+  onClearHistory
+}) => {
   const [isVisible, setIsVisible] = useState(false)
   const [shouldRender, setShouldRender] = useState(false)
+  const [collapsedGroups, setCollapsedGroups] = useState({})
 
   const isOverlay = variant === 'overlay'
 
@@ -13,6 +22,31 @@ const DownloadManager = ({ downloads, variant = 'overlay', hidden = false, onDis
   const queuedCount = useMemo(() => {
     return downloads.filter((d) => d.state === 'queued').length
   }, [downloads])
+
+  // Group download history by magnetTitle
+  const groupedHistory = useMemo(() => {
+    const groups = {}
+    for (const item of downloadHistory) {
+      const key = item.magnetTitle || 'Unknown'
+      if (!groups[key]) {
+        groups[key] = []
+      }
+      groups[key].push(item)
+    }
+    // Sort groups by most recent download
+    return Object.entries(groups).sort((a, b) => {
+      const aLatest = Math.max(...a[1].map((d) => new Date(d.completedAt).getTime()))
+      const bLatest = Math.max(...b[1].map((d) => new Date(d.completedAt).getTime()))
+      return bLatest - aLatest
+    })
+  }, [downloadHistory])
+
+  const toggleGroup = (groupName) => {
+    setCollapsedGroups((prev) => ({
+      ...prev,
+      [groupName]: !prev[groupName]
+    }))
+  }
 
   useEffect(() => {
     // For the page view, render as a normal section; no overlay transitions needed.
@@ -40,7 +74,7 @@ const DownloadManager = ({ downloads, variant = 'overlay', hidden = false, onDis
     }
   }, [downloads, hidden, isOverlay])
 
-  if (isOverlay && (!shouldRender && !isVisible)) return null
+  if (isOverlay && !shouldRender && !isVisible) return null
 
   if (!isOverlay) {
     return (
@@ -84,7 +118,9 @@ const DownloadManager = ({ downloads, variant = 'overlay', hidden = false, onDis
                     <div className="w-full bg-gray-700 rounded-full h-1.5 mt-1">
                       <div
                         className="bg-accent h-1.5 rounded-full transition-all duration-300"
-                        style={{ width: `${(download.receivedBytes / download.totalBytes) * 100}%` }}
+                        style={{
+                          width: `${(download.receivedBytes / download.totalBytes) * 100}%`
+                        }}
                       />
                     </div>
                   )}
@@ -126,12 +162,12 @@ const DownloadManager = ({ downloads, variant = 'overlay', hidden = false, onDis
         {/* Completed Downloads (History) Section */}
         <div className="bg-surface rounded-xl p-6 border border-gray-700">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold">Completed Downloads (History)</h2>
+            <h2 className="text-xl font-bold">Download History</h2>
             <div className="flex items-center gap-4">
               <span className="text-sm text-gray-400">
                 {downloadHistory.length === 0
-                  ? 'No completed downloads'
-                  : `${downloadHistory.length} completed`}
+                  ? 'No downloads'
+                  : `${downloadHistory.length} file${downloadHistory.length === 1 ? '' : 's'} in ${groupedHistory.length} group${groupedHistory.length === 1 ? '' : 's'}`}
               </span>
               {downloadHistory.length > 0 && (
                 <button
@@ -148,55 +184,129 @@ const DownloadManager = ({ downloads, variant = 'overlay', hidden = false, onDis
           {downloadHistory.length === 0 ? (
             <div className="text-gray-400 text-sm">Completed downloads will appear here.</div>
           ) : (
-            <div className="space-y-2">
-              {downloadHistory.map((historyItem) => (
-                <div
-                  key={historyItem.id}
-                  className="p-3 bg-background rounded-lg border border-gray-700/60"
-                >
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-sm text-gray-200 truncate pr-2" title={historyItem.filename}>
-                      {historyItem.filename}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-400 whitespace-nowrap">
-                        {historyItem.state === 'completed' ? 'Completed' : 'Failed'}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => onRemoveFromHistory(historyItem.id)}
-                        className="text-xs px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded transition-colors"
-                        title="Remove from history"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  </div>
+            <div className="space-y-3">
+              {groupedHistory.map(([magnetTitle, items]) => {
+                const isCollapsed = collapsedGroups[magnetTitle]
+                const completedCount = items.filter((i) => i.state === 'completed').length
+                const failedCount = items.filter((i) => i.state === 'failed').length
+                const latestDate = new Date(
+                  Math.max(...items.map((i) => new Date(i.completedAt).getTime()))
+                )
 
-                  <div className="text-xs text-gray-500 mt-1">
-                    {new Date(historyItem.completedAt).toLocaleString()}
-                  </div>
+                return (
+                  <div
+                    key={magnetTitle}
+                    className="bg-background rounded-lg border border-gray-700/60 overflow-hidden"
+                  >
+                    {/* Group Header */}
+                    <button
+                      type="button"
+                      onClick={() => toggleGroup(magnetTitle)}
+                      className="w-full p-3 flex items-center justify-between hover:bg-gray-800/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className={`h-4 w-4 text-gray-400 transition-transform ${isCollapsed ? '' : 'rotate-90'}`}
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                        <span
+                          className="text-sm font-medium text-gray-200 truncate"
+                          title={magnetTitle}
+                        >
+                          {magnetTitle}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 flex-shrink-0">
+                        <span className="text-xs text-gray-500">
+                          {latestDate.toLocaleDateString()}
+                        </span>
+                        <span className="text-xs text-gray-400">
+                          {completedCount} file{completedCount === 1 ? '' : 's'}
+                          {failedCount > 0 && (
+                            <span className="text-red-400 ml-1">({failedCount} failed)</span>
+                          )}
+                        </span>
+                      </div>
+                    </button>
 
-                  {historyItem.state === 'completed' && historyItem.savePath && (
-                    <div className="flex items-center gap-2 mt-2">
-                      <button
-                        type="button"
-                        onClick={() => window.api.openFolder(historyItem.savePath)}
-                        className="text-xs px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded transition-colors"
-                      >
-                        📁 Open Folder
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => window.api.playFile(historyItem.savePath)}
-                        className="text-xs px-2 py-1 bg-accent hover:bg-accent/80 rounded transition-colors"
-                      >
-                        ▶️ Play in VLC
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))}
+                    {/* Group Files */}
+                    {!isCollapsed && (
+                      <div className="border-t border-gray-700/60">
+                        {items.map((historyItem) => (
+                          <div
+                            key={historyItem.id}
+                            className="p-3 pl-10 border-b border-gray-700/30 last:border-b-0 hover:bg-gray-800/30"
+                          >
+                            <div className="flex justify-between items-center mb-1">
+                              <span
+                                className="text-sm text-gray-300 truncate pr-2"
+                                title={historyItem.filename}
+                              >
+                                {historyItem.filename}
+                              </span>
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className={`text-xs whitespace-nowrap ${historyItem.state === 'completed' ? 'text-green-500' : 'text-red-400'}`}
+                                >
+                                  {historyItem.state === 'completed' ? 'Completed' : 'Failed'}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    onRemoveFromHistory(historyItem.id)
+                                  }}
+                                  className="text-xs px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded transition-colors"
+                                  title="Remove from history"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="text-xs text-gray-500">
+                              {new Date(historyItem.completedAt).toLocaleString()}
+                            </div>
+
+                            {historyItem.state === 'completed' && historyItem.savePath && (
+                              <div className="flex items-center gap-2 mt-2">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    window.api.openFolder(historyItem.savePath)
+                                  }}
+                                  className="text-xs px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded transition-colors"
+                                >
+                                  Open Folder
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    window.api.playFile(historyItem.savePath)
+                                  }}
+                                  className="text-xs px-2 py-1 bg-accent hover:bg-accent/80 rounded transition-colors"
+                                >
+                                  Play in VLC
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           )}
         </div>

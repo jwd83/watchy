@@ -191,7 +191,7 @@ function App() {
   const handleSelectResult = async (result) => {
     setIsLoading(true)
     setView('search') // Switch to search view to show files
-    setStatusModal({ message: `Unlocking \"${result.title}\"...`, type: 'loading' })
+    setStatusModal({ message: `Unlocking "${result.title}"...`, type: 'loading' })
 
     // Store current magnet context for history tracking and favorites
     const hash = extractMagnetHash(result.magnet)
@@ -323,9 +323,12 @@ function App() {
       try {
         const unlock = await window.api.getFiles(link)
         if (unlock?.status === 'success' && unlock?.data?.link) {
-          out.push({ filename: decodeURIComponent(unlock.data.filename || 'file'), link: unlock.data.link })
+          out.push({
+            filename: decodeURIComponent(unlock.data.filename || 'file'),
+            link: unlock.data.link
+          })
         }
-      } catch (e) {
+      } catch {
         // ignore individual link failures
       }
     }

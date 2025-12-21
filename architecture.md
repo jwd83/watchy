@@ -5,6 +5,7 @@ This document describes the structure and behavior of the Watchy desktop applica
 ## High-Level Overview
 
 Watchy is a cross-platform Electron desktop app that lets users:
+
 - Search public P2P indexes for torrents.
 - Upload magnet links to AllDebrid for caching and link unlocking.
 - Stream unlocked video files to VLC.
@@ -40,6 +41,7 @@ Watchy is a cross-platform Electron desktop app that lets users:
 Entry point: `src/main/index.js` (bundled to `out/main/index.js` in production).
 
 Responsibilities:
+
 - Create and manage the main `BrowserWindow`.
 - Configure application icon and Windows app metadata.
 - Wire up `ipcMain.handle` routes used by the renderer.
@@ -80,6 +82,7 @@ Responsibilities:
   - `onDownloadComplete(url)` – remove from `activeDownloads` and reprocess queue.
 
 `BrowserWindow.webContents.session.on('will-download')` is used to:
+
 - Re-map download path based on `downloadTargets` (if a target directory was specified from the renderer).
 - Track progress via `item.on('updated')` and send `download:progress` events with:
   - `filename`, `receivedBytes`, `totalBytes`, `savePath`, `state: 'progressing'`.
@@ -105,11 +108,13 @@ The renderer listens for `download:progress` via the preload bridge.
 Entry point: `src/preload/index.js`.
 
 Responsibilities:
+
 - Create a safe API surface for the renderer via `contextBridge.exposeInMainWorld`.
 - Re-export `electronAPI` from `@electron-toolkit/preload` as `window.electron`.
 - Expose `window.api` functions that map to `ipcRenderer.invoke` calls for all app-specific features.
 
 Exposed methods under `window.api`:
+
 - Search and metadata:
   - `search(query)` → `api:search`.
   - `mediaSuggest(query, limit)` → `api:mediaSuggest`.
@@ -163,12 +168,14 @@ All services live under `src/main/services` and are imported by `src/main/index.
 Wrapper around AllDebrid v4 and v4.1 APIs.
 
 Internal details:
+
 - Uses `electron-store` to persist the API key under key `alldebrid_api_key`.
 - Uses a fixed `agent` string: `watchy-app`.
 - `BASE_URL = 'https://api.alldebrid.com/v4'`.
 - `BASE_URL_V41 = 'https://api.alldebrid.com/v4.1'`.
 
 Methods:
+
 - `get apiKey()` – reads the stored API key.
 - `async setApiKey(key)` – persists the key.
 - `async uploadMagnet(magnet)` – v4 `magnet/upload` (GET, query params: `agent`, `apikey`, `magnets`).
@@ -212,6 +219,7 @@ Keys and structures:
   - Array of entries:
     - `id: string`.
     - `filename: string`.
+    - `magnetTitle: string` – source magnet title for grouping (required; old entries without this field are auto-removed).
     - `state: 'completed' | 'failed'`.
     - `savePath: string | null`.
     - `receivedBytes: number`.
@@ -220,6 +228,7 @@ Keys and structures:
     - `originalState: same as state`.
 
 Exposed methods (wired via IPC):
+
 - Saved searches: `getSavedSearches`, `addSavedSearch`, `removeSavedSearch`.
 - Saved magnets: `getSavedMagnets`, `addSavedMagnet`, `removeSavedMagnet`.
 - Magnet IDs: `getMagnetIdByHash`, `setMagnetId`.
@@ -231,10 +240,12 @@ Exposed methods (wired via IPC):
 Read-only access to `media_catalog.db` using `better-sqlite3`.
 
 Responsibilities:
+
 - Find and open `media_catalog.db` in dev and prod builds.
 - Provide `suggest(query, limit)` for search bar suggestions.
 
 DB location resolution (`getMediaCatalogDbPath`):
+
 - Prod: `path.join(process.resourcesPath, 'media_catalog.db')`.
 - Dev candidates (first existing path is used):
   1. `path.join(app.getAppPath(), 'media_catalog.db')`.
@@ -304,21 +315,25 @@ Spawns VLC as an external process for playback.
 ## Renderer (React SPA)
 
 Entry HTML: `src/renderer/index.html`.
+
 - Sets CSP to restrict scripts/styles to self and inline styles; images to self+data.
 - Loads React bundle with `<script type="module" src="/src/main.jsx"></script>`.
 
 React entry: `src/renderer/src/main.jsx`.
+
 - Imports `./assets/main.css` (Tailwind + app styles).
 - Renders `<App />` under `#root` with `ReactDOM.createRoot` and `<StrictMode>`.
 
 ### App Component (`App.jsx`)
 
 Overall responsibilities:
+
 - Global layout and navigation between views (`search`, `library`, `history`, `downloads`).
 - Orchestrate search, unlock, playback, and persistence flows.
 - Manage toast notifications, status modal, settings modal, and download UI.
 
 Key pieces of state:
+
 - `results` – list of search results (from `window.api.search`).
 - `files` – list of unlocked files for a selected magnet (`[{ filename, link }]`).
 - `isLoading` – generic loading flag.
@@ -337,6 +352,7 @@ Key pieces of state:
 - `currentMediaCatalogTitle` – canonical title from media catalog suggestion when search includes an IMDb ID.
 
 Initialization effects:
+
 - On mount:
   - Fetch AllDebrid API key; if missing, open settings modal.
   - Load library, watch history, and download history.
@@ -399,15 +415,15 @@ The History view can also replay `streamUrl` directly or reconstruct a magnet fr
 - Inside `FileUserInterface`:
   - "Download" for a single file:
     - Optionally resolves a hoster link to a direct URL via `window.api.resolve`.
-    - Calls `window.api.download(url)` with no directory, letting Electron use its default path.
+    - Calls `window.api.download(url, { magnetTitle })` to track the source magnet.
   - "Download All":
     - Calls `window.api.selectFolder()` to choose a target folder.
-    - Resolves each video file link via `window.api.resolve` and calls `window.api.download(url, { directory: folder })`.
+    - Resolves each video file link via `window.api.resolve` and calls `window.api.download(url, { directory: folder, magnetTitle })`.
 
 - Renderer listens to `onDownloadProgress` to maintain `activeDownloads`.
 - `DownloadManager` has two modes:
   - Overlay (bottom-right popover) showing current downloads and allowing quick access (open folder, play file, hide overlay).
-  - Full page view (`view === 'downloads'`) showing both active downloads and completed download history, with the ability to clear or remove entries and open/play files.
+  - Full page view (`view === 'downloads'`) showing both active downloads and completed download history grouped by `magnetTitle`, with collapsible groups, the ability to clear or remove entries, and open/play files.
 
 #### Library and History Views
 
@@ -437,6 +453,7 @@ The History view can also replay `streamUrl` directly or reconstruct a magnet fr
 ### SearchBar Component
 
 Key behaviors:
+
 - Maintains its own `query` string (not directly synced to `currentQuery` from `App`).
 - Uses `window.api.mediaSuggest` with a small debounce (150 ms) and a request id to avoid race conditions.
 - Suggestion items include title, year, type, primary genre, runtime, IMDb rating and votes.
@@ -446,6 +463,7 @@ Key behaviors:
 ### FileUserInterface Component
 
 Key behaviors:
+
 - Filters `files` to video-like file extensions (`mp4`, `mkv`, `avi`, `mov`, `wmv`).
 - Sorts results via natural sort on `filename`.
 - Shows a list of video files with:
