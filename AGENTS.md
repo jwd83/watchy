@@ -58,7 +58,7 @@ npm run icon:generate    # Generate icons from source (uses convert-icon.js)
 
 - React-based UI with Tailwind CSS styling
 - Manages application state (search results, file lists, library items)
-- Two main views: Search and Library
+- Four main views: Search, Library, History, and Downloads
 
 ### Service Layer
 
@@ -85,7 +85,8 @@ Services are singleton instances in `src/main/services/`:
 
 **library.js**
 
-- Manages saved searches and magnet links using electron-store
+- Manages saved searches, saved magnets, watch history, and download history using electron-store
+- Caches AllDebrid magnet IDs by torrent hash for faster lookups
 - Prevents duplicate entries
 - Uses ISO timestamps for sorting
 
@@ -115,8 +116,12 @@ The app uses React hooks for state management in `App.jsx`:
 - `results`: Current search results array
 - `files`: Unlocked file list from AllDebrid
 - `isLoading`: Global loading state
-- `view`: Current view ('search' or 'library')
+- `view`: Current view ('search', 'library', 'history', or 'downloads')
 - `savedSearches`/`savedMagnets`: Library data synced from electron-store
+- `history`: Watch history entries
+- `currentMagnet`: Context for currently selected magnet (hash, title, etc.)
+- `activeDownloads`: Live snapshot of in-progress downloads
+- `downloadHistory`: Persisted download history
 
 ### AllDebrid Workflow
 
