@@ -4,10 +4,12 @@ const BASE_URL = 'https://apibay.org'
 
 class ScraperService {
   async search(query) {
-    console.log(`[Scraper] Searching Apibay for: ${query}`)
+    // Apibay doesn't handle apostrophes well, replace with space
+    const sanitizedQuery = query.replace(/'/g, ' ').replace(/\s+/g, ' ').trim()
+    console.log(`[Scraper] Searching Apibay for: ${sanitizedQuery}`)
     try {
       // cat=0 means all categories
-      const searchUrl = `${BASE_URL}/q.php?q=${encodeURIComponent(query)}&cat=0`
+      const searchUrl = `${BASE_URL}/q.php?q=${encodeURIComponent(sanitizedQuery)}&cat=0`
       console.log(`[Scraper] URL: ${searchUrl}`)
 
       const response = await axios.get(searchUrl)
