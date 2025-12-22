@@ -42,7 +42,7 @@ const ResultCard = ({ result, canonicalTitle, onSelect, onSave, isSaved }) => {
             {primaryTitle}
           </h3>
           {subtitle && (
-            <div className="text-xs text-gray-400 mb-1 truncate" title={subtitle}>
+            <div className="text-sm text-gray-400 mb-1 truncate" title={subtitle}>
               {subtitle}
             </div>
           )}
