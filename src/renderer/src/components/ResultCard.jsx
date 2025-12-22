@@ -22,7 +22,7 @@ function parseEpisodeInfo(title) {
   return null
 }
 
-const ResultCard = ({ result, canonicalTitle, onSelect, onSave }) => {
+const ResultCard = ({ result, canonicalTitle, onSelect, onSave, isSaved }) => {
   const episodeInfo = canonicalTitle ? parseEpisodeInfo(result.title) : null
   const primaryTitle = canonicalTitle
     ? episodeInfo
@@ -59,8 +59,10 @@ const ResultCard = ({ result, canonicalTitle, onSelect, onSave }) => {
             e.stopPropagation()
             onSave(result)
           }}
-          className="flex-shrink-0 p-2 text-gray-400 hover:text-primary transition-colors"
-          title="Save to library"
+          className={`flex-shrink-0 p-2 transition-colors ${
+            isSaved ? 'text-green-500' : 'text-gray-400 hover:text-primary'
+          }`}
+          title={isSaved ? 'In library' : 'Save to library'}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"

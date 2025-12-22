@@ -576,6 +576,7 @@ function App() {
                     canonicalTitle={currentMediaCatalogTitle || result.catalogTitle}
                     onSelect={handleSelectResult}
                     onSave={handleSaveMagnet}
+                    isSaved={savedMagnets.some((m) => m.magnet === result.magnet)}
                   />
                 ))}
               </div>
