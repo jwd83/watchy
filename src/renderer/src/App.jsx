@@ -573,7 +573,7 @@ function App() {
                   <ResultCard
                     key={index}
                     result={result}
-                    canonicalTitle={currentMediaCatalogTitle}
+                    canonicalTitle={currentMediaCatalogTitle || result.catalogTitle}
                     onSelect={handleSelectResult}
                     onSave={handleSaveMagnet}
                   />

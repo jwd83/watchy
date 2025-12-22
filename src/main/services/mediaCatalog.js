@@ -76,6 +76,39 @@ function getDb() {
 }
 
 class MediaCatalogService {
+  lookupByImdbIds(ids) {
+    if (!Array.isArray(ids) || ids.length === 0) return new Map()
+
+    try {
+      getDb()
+    } catch {
+      return new Map()
+    }
+
+    const placeholders = ids.map(() => '?').join(',')
+    const stmt = db.prepare(`
+      SELECT
+        Title  AS title,
+        Year   AS year,
+        IMDbID AS imdbId,
+        Rating AS rating
+      FROM media_catalog
+      WHERE IMDbID IN (${placeholders})
+    `)
+
+    try {
+      const rows = stmt.all(...ids)
+      const map = new Map()
+      for (const row of rows) {
+        map.set(row.imdbId, row)
+      }
+      return map
+    } catch (err) {
+      console.error('[MediaCatalog] lookupByImdbIds query failed', err)
+      return new Map()
+    }
+  }
+
   suggest(rawQuery, limit = 10) {
     const q = (rawQuery || '').trim()
     if (q.length < 2) return []

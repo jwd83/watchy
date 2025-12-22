@@ -30,7 +30,8 @@ class ScraperService {
           leeches: parseInt(item.leechers),
           size: this.formatSize(parseInt(item.size)),
           magnet,
-          link: magnet // We use magnet as the link now
+          link: magnet,
+          imdb: item.imdb || null
         }
       })
     } catch (error) {

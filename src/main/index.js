@@ -206,7 +206,20 @@ app.whenReady().then(() => {
 
   // API Handlers
   ipcMain.handle('api:search', async (_, query) => {
-    return await scraper.search(query)
+    const results = await scraper.search(query)
+
+    // Enrich results with catalog metadata for any that have imdb IDs
+    const imdbIds = [...new Set(results.map((r) => r.imdb).filter(Boolean))]
+    if (imdbIds.length > 0) {
+      const catalogMap = mediaCatalog.lookupByImdbIds(imdbIds)
+      for (const result of results) {
+        if (result.imdb && catalogMap.has(result.imdb)) {
+          result.catalogTitle = catalogMap.get(result.imdb).title
+        }
+      }
+    }
+
+    return results
   })
 
   ipcMain.handle('api:mediaSuggest', (_, query, limit) => {
