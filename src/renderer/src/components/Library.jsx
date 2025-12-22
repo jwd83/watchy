@@ -95,10 +95,13 @@ const Library = ({
                 return (
                   <div
                     key={item.id}
-                    className="bg-surface p-4 rounded-xl border border-gray-700 hover:border-primary transition-all group"
+                    className="bg-surface p-4 rounded-xl border border-gray-700 hover:border-primary transition-all group overflow-hidden"
                   >
                     <div className="flex justify-between items-start">
-                      <button onClick={() => onMagnetSelect(item)} className="flex-1 text-left">
+                      <button
+                        onClick={() => onMagnetSelect(item)}
+                        className="flex-1 min-w-0 text-left"
+                      >
                         <h3
                           className="text-lg font-semibold mb-1 group-hover:text-primary transition-colors truncate"
                           title={primaryTitle}
@@ -163,10 +166,13 @@ const Library = ({
               {filteredSearches.map((search) => (
                 <div
                   key={search.id}
-                  className="bg-surface p-4 rounded-xl border border-gray-700 hover:border-primary transition-all group flex justify-between items-center"
+                  className="bg-surface p-4 rounded-xl border border-gray-700 hover:border-primary transition-all group flex justify-between items-center overflow-hidden"
                 >
-                  <button onClick={() => onSearchSelect(search.query)} className="flex-1 text-left">
-                    <div className="text-lg group-hover:text-primary transition-colors">
+                  <button
+                    onClick={() => onSearchSelect(search.query)}
+                    className="flex-1 min-w-0 text-left"
+                  >
+                    <div className="text-lg group-hover:text-primary transition-colors truncate">
                       {search.query}
                     </div>
                     <div className="text-sm text-gray-500">

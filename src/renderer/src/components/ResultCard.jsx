@@ -32,7 +32,7 @@ const ResultCard = ({ result, canonicalTitle, onSelect, onSave }) => {
   const subtitle = canonicalTitle ? result.title : null
 
   return (
-    <div className="bg-surface p-4 rounded-xl border border-gray-700 hover:border-primary hover:bg-gray-700/50 transition-all hover:shadow-xl group">
+    <div className="bg-surface p-4 rounded-xl border border-gray-700 hover:border-primary hover:bg-gray-700/50 transition-all hover:shadow-xl group overflow-hidden">
       <div className="flex items-start gap-4">
         <button onClick={() => onSelect(result)} className="flex-1 min-w-0 text-left">
           <h3
