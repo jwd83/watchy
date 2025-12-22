@@ -1,5 +1,34 @@
+function parseEpisodeInfo(title) {
+  if (!title) return null
+  const t = title.toUpperCase()
+
+  // Complete series: "Season 1-5", "S01-S05", "Complete Series"
+  if (/SEASON\s*\d+\s*[-–]\s*\d+|S\d{1,2}\s*[-–]\s*S?\d{1,2}|COMPLETE\s*SERIES/i.test(title)) {
+    return 'Complete Series'
+  }
+
+  // Complete season: "Season 1", "S01" (but not followed by E)
+  const seasonOnly = t.match(/\bS(\d{1,2})(?!\s*E)\b/) || title.match(/\bSEASON\s*(\d{1,2})\b/i)
+  if (seasonOnly && !/S\d{1,2}\s*E\d/i.test(title)) {
+    return `Season ${parseInt(seasonOnly[1], 10)}`
+  }
+
+  // Specific episode: "S01E05", "S1E5"
+  const ep = title.match(/\bS(\d{1,2})\s*E(\d{1,2})\b/i)
+  if (ep) {
+    return `S${parseInt(ep[1], 10)}E${parseInt(ep[2], 10)}`
+  }
+
+  return null
+}
+
 const ResultCard = ({ result, canonicalTitle, onSelect, onSave }) => {
-  const primaryTitle = canonicalTitle || result.title
+  const episodeInfo = canonicalTitle ? parseEpisodeInfo(result.title) : null
+  const primaryTitle = canonicalTitle
+    ? episodeInfo
+      ? `${canonicalTitle} - ${episodeInfo}`
+      : canonicalTitle
+    : result.title
   const subtitle = canonicalTitle ? result.title : null
 
   return (
