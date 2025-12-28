@@ -119,7 +119,7 @@ def change_version():
             capture_output=True,
             text=True,
             check=True,
-            shell=True,
+            shell=sys.platform == 'win32',
         )
     except subprocess.CalledProcessError as e:
         print(f"npm version failed (exit {e.returncode}); aborting version change.")
