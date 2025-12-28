@@ -96,10 +96,18 @@ Services are singleton instances in `src/main/services/`:
 - Provides autosuggest results for the search bar (title/year/type/rating/votes + IMDbID)
 - IPC: exposed via `api:mediaSuggest` → `window.api.mediaSuggest(query, limit)`
 
+**posters.js**
+
+- Reads a local SQLite database `posters.db` (readonly) using `better-sqlite3`
+- Stores poster images as webp BLOBs indexed by IMDbID
+- Provides poster lookup by IMDbID, returning base64 data URLs for display
+- IPC: exposed via `api:getPosters` → `window.api.getPosters(imdbIds)`
+
 Notes on IMDbID searches:
 
 - When a suggestion is chosen, the UI formats queries like: `Some Title (2024) [tt1234567]`
 - `App.handleSearch()` will detect `tt\d{7,8}` anywhere in the query string and perform the actual P2P search using only the `tt...` token, while keeping the full string for saving/history clarity.
+- Search suggestions display poster images (48x64px) on the left side when available from `posters.db`
 
 ### IPC Communication Pattern
 

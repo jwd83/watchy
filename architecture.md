@@ -32,6 +32,7 @@ Watchy is a cross-platform Electron desktop app that lets users:
 - `src/renderer` – React application (index HTML + React SPA under `src/renderer/src`).
 - `build/` – Icons and entitlement files used in packaged builds.
 - `media_catalog.db` – SQLite database bundled with the app for media suggestions.
+- `posters.db` – SQLite database bundled with the app for poster images.
 - `builder.py`, `electron-builder.yml`, `electron.vite.config.mjs` – Packaging and release tooling.
 
 ## Process Architecture
@@ -118,6 +119,7 @@ Exposed methods under `window.api`:
 - Search and metadata:
   - `search(query)` → `api:search`.
   - `mediaSuggest(query, limit)` → `api:mediaSuggest`.
+  - `getPosters(imdbIds)` → `api:getPosters`.
 - AllDebrid integration:
   - `unlock(magnet)` → `api:unlock` (upload magnet; v4 API).
   - `getStatus(id)` → `api:getStatus` (legacy v4 status).
@@ -277,6 +279,37 @@ LIMIT ?;
 `escapeLike` escapes `%`, `_`, and `\` so the query is safe.
 
 Return shape: array of rows with fields `{ title, year, imdbId, type, primaryGenre, runtime, rating, votes }`.
+
+### PostersService (`posters.js`)
+
+Read-only access to `posters.db` using `better-sqlite3`.
+
+Responsibilities:
+
+- Find and open `posters.db` in dev and prod builds.
+- Provide `getPostersByImdbIds(ids)` for retrieving poster images.
+
+DB location resolution (`getPostersDbPath`):
+
+- Prod: `path.join(process.resourcesPath, 'posters.db')`.
+- Dev candidates (first existing path is used):
+  1. `path.join(app.getAppPath(), 'posters.db')`.
+  2. `path.join(__dirname, '../../../posters.db')` (accounting for compiled main path).
+  3. `path.join(process.cwd(), 'posters.db')`.
+
+Query used by `getPostersByImdbIds`:
+
+```sql
+SELECT
+  IMDbID AS imdbId,
+  webp
+FROM posters
+WHERE IMDbID IN (?, ?, ...);
+```
+
+The service converts the `webp` BLOB to a base64-encoded data URL (`data:image/webp;base64,...`) for direct use in the renderer.
+
+Return shape: `Map<imdbId, dataUrl>` where `dataUrl` is a string like `data:image/webp;base64,<base64String>`.
 
 ### ScraperService (`scraper.js`)
 
@@ -456,7 +489,8 @@ Key behaviors:
 
 - Maintains its own `query` string (not directly synced to `currentQuery` from `App`).
 - Uses `window.api.mediaSuggest` with a small debounce (150 ms) and a request id to avoid race conditions.
-- Suggestion items include title, year, type, primary genre, runtime, IMDb rating and votes.
+- After receiving suggestions, fetches poster images via `window.api.getPosters(imdbIds)` for suggestions with IMDb IDs.
+- Suggestion items include title, year, type, primary genre, runtime, IMDb rating, votes, and a poster image (48x64px) when available.
 - Picking a suggestion formats a display string like `"Title (Year) [tt1234567]"` and passes it to `onSearch`.
 - Provides a button to save the `currentQuery` (provided by `App`) as a saved search.
 
@@ -483,7 +517,7 @@ Key behaviors:
 
 ### Electron Builder
 
-- Configured via `electron-builder.yml` (not detailed here; responsible for bundling `media_catalog.db` and icons into `resources`).
+- Configured via `electron-builder.yml` (not detailed here; responsible for bundling `media_catalog.db`, `posters.db`, and icons into `resources`).
 - `builder.py` is a release helper that:
   - Optionally bumps version and tags releases.
   - Pushes a git tag of the form `v<version>`.
@@ -499,6 +533,9 @@ Key behaviors:
 - **Network access**:
   - To `https://apibay.org` for torrent search.
   - To `https://api.alldebrid.com` for AllDebrid operations.
+- **Local databases**:
+  - `media_catalog.db` (bundled): SQLite database for media metadata and search suggestions.
+  - `posters.db` (bundled): SQLite database for poster images mapped by IMDbID.
 
 ## Reimplementation Notes
 
@@ -509,8 +546,9 @@ When rebuilding this app from scratch, preserve these key contracts:
 3. **Persistent data model** in `electron-store` for saved searches, library entries, magnet ID map, history, and download history.
 4. **Download queue semantics** (max 3 concurrent, queued state, progress events, and final history entry creation).
 5. **Media catalog query behavior** so that search suggestions and canonical titles work the same way.
-6. **AllDebrid interactions**: use the same endpoints and response expectations, including v4.1 magnet/files and fallback to v4 link/unlock.
-7. **VLC launching behavior** with platform-specific paths and URL sanitation.
-8. **Overall UX flow**: search → select result → upload/unlock magnet → choose file → play or download → track history and download history.
+6. **Poster lookup behavior** using `posters.db` with IMDbID → webp BLOB mapping, returning base64 data URLs for display in the search suggestions UI.
+7. **AllDebrid interactions**: use the same endpoints and response expectations, including v4.1 magnet/files and fallback to v4 link/unlock.
+8. **VLC launching behavior** with platform-specific paths and URL sanitation.
+9. **Overall UX flow**: search → select result → upload/unlock magnet → choose file → play or download → track history and download history.
 
 As long as these contracts and flows are preserved, the UI components and internal implementation details can be refactored or replaced while maintaining app behavior.
