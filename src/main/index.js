@@ -6,6 +6,7 @@ import scraper from './services/scraper'
 import vlc from './services/vlc'
 import library from './services/library'
 import mediaCatalog from './services/mediaCatalog'
+import posters from './services/posters'
 
 const downloadTargets = new Map()
 const downloadMetadata = new Map() // url -> { magnetTitle }
@@ -224,6 +225,10 @@ app.whenReady().then(() => {
 
   ipcMain.handle('api:mediaSuggest', (_, query, limit) => {
     return mediaCatalog.suggest(query, limit)
+  })
+
+  ipcMain.handle('api:getPosters', (_, imdbIds) => {
+    return posters.getPostersByImdbIds(imdbIds)
   })
 
   ipcMain.handle('api:unlock', async (_, magnet) => {

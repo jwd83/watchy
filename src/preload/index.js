@@ -5,6 +5,7 @@ import { electronAPI } from '@electron-toolkit/preload'
 const api = {
   search: (query) => ipcRenderer.invoke('api:search', query),
   mediaSuggest: (query, limit) => ipcRenderer.invoke('api:mediaSuggest', query, limit),
+  getPosters: (imdbIds) => ipcRenderer.invoke('api:getPosters', imdbIds),
   unlock: (magnet) => ipcRenderer.invoke('api:unlock', magnet),
   getStatus: (id) => ipcRenderer.invoke('api:getStatus', id),
   // New v4.1 helpers

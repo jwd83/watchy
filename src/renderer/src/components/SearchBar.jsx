@@ -14,6 +14,7 @@ const SearchBar = ({ onSearch, onSaveSearch, isLoading, currentQuery }) => {
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1)
   const [isSuggesting, setIsSuggesting] = useState(false)
+  const [posters, setPosters] = useState(new Map())
 
   const requestIdRef = useRef(0)
   const blurTimeoutRef = useRef(null)
@@ -28,6 +29,7 @@ const SearchBar = ({ onSearch, onSaveSearch, isLoading, currentQuery }) => {
     if (q.length < 2) {
       setSuggestions([])
       setActiveIndex(-1)
+      setPosters(new Map())
       return
     }
 
@@ -38,8 +40,19 @@ const SearchBar = ({ onSearch, onSaveSearch, isLoading, currentQuery }) => {
       try {
         const res = await window.api.mediaSuggest(q, SUGGESTION_LIMIT)
         if (requestIdRef.current !== id) return
-        setSuggestions(Array.isArray(res) ? res : [])
+
+        const suggestionsList = Array.isArray(res) ? res : []
+        setSuggestions(suggestionsList)
         setActiveIndex(-1)
+
+        // Fetch posters for IMDb IDs in suggestions
+        const imdbIds = suggestionsList.map((s) => s.imdbId).filter(Boolean)
+        if (imdbIds.length > 0) {
+          const postersMap = await window.api.getPosters(imdbIds)
+          if (requestIdRef.current === id) {
+            setPosters(postersMap)
+          }
+        }
       } finally {
         if (requestIdRef.current === id) setIsSuggesting(false)
       }
@@ -149,16 +162,25 @@ const SearchBar = ({ onSearch, onSaveSearch, isLoading, currentQuery }) => {
                           : 'hover:bg-gray-800/60 border-l-2 border-transparent'
                       }`}
                     >
-                      <div className="min-w-0">
-                        <div className="font-medium text-gray-100 truncate">
-                          {s.title}
-                          {s.year ? <span className="text-gray-400"> ({s.year})</span> : null}
-                        </div>
-                        <div className="text-xs text-gray-500 truncate">
-                          {s.type ? s.type : 'unknown'}
-                          {s.primaryGenre ? ` • ${s.primaryGenre}` : ''}
-                          {s.runtime ? ` • ${formatRuntime(s.runtime)}` : ''}
-                          {s.imdbId ? ` • ${s.imdbId}` : ''}
+                      <div className="flex items-start gap-3 min-w-0">
+                        {s.imdbId && posters.get(s.imdbId) && (
+                          <img
+                            src={posters.get(s.imdbId)}
+                            alt={s.title}
+                            className="w-12 h-16 object-cover rounded flex-shrink-0"
+                          />
+                        )}
+                        <div className="min-w-0">
+                          <div className="font-medium text-gray-100 truncate">
+                            {s.title}
+                            {s.year ? <span className="text-gray-400"> ({s.year})</span> : null}
+                          </div>
+                          <div className="text-xs text-gray-500 truncate">
+                            {s.type ? s.type : 'unknown'}
+                            {s.primaryGenre ? ` • ${s.primaryGenre}` : ''}
+                            {s.runtime ? ` • ${formatRuntime(s.runtime)}` : ''}
+                            {s.imdbId ? ` • ${s.imdbId}` : ''}
+                          </div>
                         </div>
                       </div>
                       <div className="flex flex-col items-end text-gray-400 whitespace-nowrap">
