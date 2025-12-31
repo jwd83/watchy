@@ -580,16 +580,21 @@ function App() {
               </div>
             ) : (
               <div className="grid gap-4">
-                {results.map((result, index) => (
-                  <ResultCard
-                    key={index}
-                    result={result}
-                    canonicalTitle={currentMediaCatalogTitle || result.catalogTitle}
-                    onSelect={handleSelectResult}
-                    onSave={handleSaveMagnet}
-                    isSaved={savedMagnets.some((m) => m.magnet === result.magnet)}
-                  />
-                ))}
+                {results.map((result, index) => {
+                  const imdbMatch = (currentQuery || '').match(/tt\d{7,8}/i)
+                  const imdbId = imdbMatch ? imdbMatch[0] : result.imdb || null
+                  return (
+                    <ResultCard
+                      key={index}
+                      result={result}
+                      canonicalTitle={currentMediaCatalogTitle || result.catalogTitle}
+                      imdbId={imdbId}
+                      onSelect={handleSelectResult}
+                      onSave={handleSaveMagnet}
+                      isSaved={savedMagnets.some((m) => m.magnet === result.magnet)}
+                    />
+                  )
+                })}
               </div>
             )}
           </>

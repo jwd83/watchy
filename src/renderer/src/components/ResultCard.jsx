@@ -1,3 +1,5 @@
+import { useState, useEffect } from 'react'
+
 function parseEpisodeInfo(title) {
   if (!title) return null
   const t = title.toUpperCase()
@@ -22,7 +24,11 @@ function parseEpisodeInfo(title) {
   return null
 }
 
-const ResultCard = ({ result, canonicalTitle, onSelect, onSave, isSaved }) => {
+const ResultCard = ({ result, canonicalTitle, imdbId, onSelect, onSave, isSaved }) => {
+  const [posters, setPosters] = useState({})
+  const [hoveredPoster, setHoveredPoster] = useState(null)
+  const [posterPreviewPos, setPosterPreviewPos] = useState({ top: 0, left: 0 })
+
   const episodeInfo = canonicalTitle ? parseEpisodeInfo(result.title) : null
   const primaryTitle = canonicalTitle
     ? episodeInfo
@@ -31,9 +37,37 @@ const ResultCard = ({ result, canonicalTitle, onSelect, onSave, isSaved }) => {
     : result.title
   const subtitle = canonicalTitle ? result.title : null
 
+  useEffect(() => {
+    if (imdbId) {
+      window.api.getPosters([imdbId]).then(setPosters)
+    }
+  }, [imdbId])
+
+  const handlePosterMouseEnter = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    setPosterPreviewPos({
+      top: rect.top,
+      left: rect.right + 12
+    })
+    setHoveredPoster(imdbId)
+  }
+
+  const handlePosterMouseLeave = () => {
+    setHoveredPoster(null)
+  }
+
   return (
     <div className="bg-surface p-4 rounded-xl border border-gray-700 hover:border-primary hover:bg-gray-700/50 transition-all hover:shadow-xl group overflow-hidden">
       <div className="flex items-start gap-4">
+        {imdbId && posters[imdbId] && (
+          <img
+            src={posters[imdbId]}
+            alt={primaryTitle}
+            className="w-12 h-16 object-cover rounded flex-shrink-0 cursor-zoom-in"
+            onMouseEnter={handlePosterMouseEnter}
+            onMouseLeave={handlePosterMouseLeave}
+          />
+        )}
         <button onClick={() => onSelect(result)} className="flex-1 min-w-0 text-left">
           <h3
             className="text-lg font-semibold mb-1 group-hover:text-primary truncate"
@@ -74,6 +108,22 @@ const ResultCard = ({ result, canonicalTitle, onSelect, onSave, isSaved }) => {
           </svg>
         </button>
       </div>
+
+      {hoveredPoster && posters[hoveredPoster] && (
+        <div
+          className="fixed z-[100] pointer-events-none"
+          style={{
+            top: posterPreviewPos.top,
+            left: posterPreviewPos.left
+          }}
+        >
+          <img
+            src={posters[hoveredPoster]}
+            alt="Poster preview"
+            className="w-48 h-72 object-cover rounded-lg shadow-2xl border border-gray-600"
+          />
+        </div>
+      )}
     </div>
   )
 }
