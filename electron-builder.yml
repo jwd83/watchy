@@ -15,8 +15,6 @@ extraResources:
     to: icon.png
   - from: media_catalog.db
     to: media_catalog.db
-  - from: posters.db
-    to: posters.db
 win:
   icon: build/icon.ico
   executableName: watchy

@@ -1,89 +1,115 @@
-import fs from 'fs'
-import path from 'path'
-import { app } from 'electron'
-import { is } from '@electron-toolkit/utils'
-import Database from 'better-sqlite3'
+import https from 'https'
 
-let db = null
+const CATALOG_URL = 'https://posters.jwd.me/catalog.txt'
+const BASE_IMAGE_URL = 'https://posters.jwd.me/raw/'
 
-function getPostersDbPath() {
-  if (!is.dev) {
-    return path.join(process.resourcesPath, 'posters.db')
+// Map of imdbId -> filename (including extension)
+const catalog = new Map()
+let isCatalogLoaded = false
+let catalogLoadPromise = null
+
+async function loadCatalog() {
+  if (catalogLoadPromise) {
+    return catalogLoadPromise
   }
 
-  const candidates = [
-    path.join(app.getAppPath(), 'posters.db'),
-    path.join(__dirname, '../../../posters.db'),
-    path.join(process.cwd(), 'posters.db')
-  ]
-
-  for (const p of candidates) {
+  catalogLoadPromise = (async () => {
     try {
-      if (fs.existsSync(p)) return p
-    } catch {
-      // ignore
+      console.log('[Posters] Fetching catalog from', CATALOG_URL)
+      const text = await fetchText(CATALOG_URL)
+      const lines = text.split('\n').filter((line) => line.trim())
+
+      for (const line of lines) {
+        const filename = line.trim()
+        if (!filename) continue
+
+        // Extract imdbId from filename (format: {imdbid}.ext)
+        const lastDotIndex = filename.lastIndexOf('.')
+        if (lastDotIndex === -1) continue
+
+        const imdbId = filename.slice(0, lastDotIndex)
+        if (imdbId.match(/^tt\d+$/)) {
+          catalog.set(imdbId, filename)
+        }
+      }
+
+      isCatalogLoaded = true
+      console.log(`[Posters] Loaded ${catalog.size} posters from catalog`)
+    } catch (err) {
+      console.error('[Posters] Failed to load catalog:', err)
+      isCatalogLoaded = false
     }
-  }
+  })()
 
-  return candidates[0]
+  return catalogLoadPromise
 }
 
-function getDb() {
-  if (db) return db
+function fetchText(url) {
+  return new Promise((resolve, reject) => {
+    https
+      .get(url, (res) => {
+        if (res.statusCode !== 200) {
+          reject(new Error(`HTTP ${res.statusCode}: ${res.statusMessage}`))
+          return
+        }
 
-  const dbPath = getPostersDbPath()
-  try {
-    db = new Database(dbPath, { readonly: true, fileMustExist: true })
-  } catch (err) {
-    console.error(`[Posters] Failed to open db at ${dbPath}`, err)
-    throw err
-  }
-
-  return db
+        let data = ''
+        res.on('data', (chunk) => {
+          data += chunk
+        })
+        res.on('end', () => {
+          resolve(data)
+        })
+      })
+      .on('error', (err) => {
+        reject(err)
+      })
+  })
 }
+
+// Initialize catalog on module load
+loadCatalog()
 
 class PostersService {
-  getPostersByImdbIds(ids) {
-    if (!Array.isArray(ids) || ids.length === 0) return new Map()
+  async getPostersByImdbIds(ids) {
+    if (!Array.isArray(ids) || ids.length === 0) return {}
 
+    console.log('[Posters] getPostersByImdbIds called with', ids.length, 'IDs:', ids)
+
+    // Wait for catalog to load
     try {
-      getDb()
-    } catch {
-      return new Map()
-    }
-
-    const placeholders = ids.map(() => '?').join(',')
-    const stmt = db.prepare(`
-      SELECT
-        IMDbID AS imdbId,
-        webp
-      FROM posters
-      WHERE IMDbID IN (${placeholders})
-    `)
-
-    try {
-      const rows = stmt.all(...ids)
-      const map = new Map()
-
-      for (const row of rows) {
-        // Convert BLOB to base64 data URL
-        const base64 = Buffer.from(row.webp).toString('base64')
-        const dataUrl = `data:image/webp;base64,${base64}`
-        map.set(row.imdbId, dataUrl)
-      }
-      return map
+      await catalogLoadPromise
     } catch (err) {
-      console.error('[Posters] getPostersByImdbIds query failed', err)
+      console.error('[Posters] Failed to load catalog:', err)
       return new Map()
     }
+
+    console.log('[Posters] Catalog loaded:', isCatalogLoaded, 'Size:', catalog.size)
+
+    if (!isCatalogLoaded || catalog.size === 0) {
+      console.warn('[Posters] Catalog not loaded or empty, returning empty map')
+      return new Map()
+    }
+
+    const result = {}
+
+    for (const id of ids) {
+      const filename = catalog.get(id)
+      if (filename) {
+        const url = `${BASE_IMAGE_URL}${filename}`
+        result[id] = url
+        console.log('[Posters] Found poster for', id, '->', url)
+      } else {
+        console.log('[Posters] No poster found for', id)
+      }
+    }
+
+    console.log('[Posters] Returning', Object.keys(result).length, 'poster URLs')
+    return result
   }
 
   close() {
-    try {
-      if (db) db.close()
-    } finally {
-      db = null
-    }
+    // No resources to clean up for remote implementation
   }
 }
 

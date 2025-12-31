@@ -14,7 +14,7 @@ const SearchBar = ({ onSearch, onSaveSearch, isLoading, currentQuery }) => {
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1)
   const [isSuggesting, setIsSuggesting] = useState(false)
-  const [posters, setPosters] = useState(new Map())
+  const [posters, setPosters] = useState({})
 
   const requestIdRef = useRef(0)
   const blurTimeoutRef = useRef(null)
@@ -29,7 +29,7 @@ const SearchBar = ({ onSearch, onSaveSearch, isLoading, currentQuery }) => {
     if (q.length < 2) {
       setSuggestions([])
       setActiveIndex(-1)
-      setPosters(new Map())
+      setPosters({})
       return
     }
 
@@ -163,9 +163,9 @@ const SearchBar = ({ onSearch, onSaveSearch, isLoading, currentQuery }) => {
                       }`}
                     >
                       <div className="flex items-start gap-3 min-w-0">
-                        {s.imdbId && posters.get(s.imdbId) && (
+                        {s.imdbId && posters[s.imdbId] && (
                           <img
-                            src={posters.get(s.imdbId)}
+                            src={posters[s.imdbId]}
                             alt={s.title}
                             className="w-12 h-16 object-cover rounded flex-shrink-0"
                           />
