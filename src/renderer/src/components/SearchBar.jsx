@@ -15,9 +15,24 @@ const SearchBar = ({ onSearch, onSaveSearch, isLoading, currentQuery }) => {
   const [activeIndex, setActiveIndex] = useState(-1)
   const [isSuggesting, setIsSuggesting] = useState(false)
   const [posters, setPosters] = useState({})
+  const [hoveredPoster, setHoveredPoster] = useState(null)
+  const [posterPreviewPos, setPosterPreviewPos] = useState({ top: 0, left: 0 })
 
   const requestIdRef = useRef(0)
   const blurTimeoutRef = useRef(null)
+
+  const handlePosterMouseEnter = (e, imdbId) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    setPosterPreviewPos({
+      top: rect.top,
+      left: rect.right + 12
+    })
+    setHoveredPoster(imdbId)
+  }
+
+  const handlePosterMouseLeave = () => {
+    setHoveredPoster(null)
+  }
 
   useEffect(() => {
     if (blurTimeoutRef.current) {
@@ -67,6 +82,7 @@ const SearchBar = ({ onSearch, onSaveSearch, isLoading, currentQuery }) => {
     if (q) {
       setShowSuggestions(false)
       setActiveIndex(-1)
+      setHoveredPoster(null)
       onSearch(q)
     }
   }
@@ -74,6 +90,7 @@ const SearchBar = ({ onSearch, onSaveSearch, isLoading, currentQuery }) => {
   const handlePickSuggestion = (s) => {
     setShowSuggestions(false)
     setActiveIndex(-1)
+    setHoveredPoster(null)
 
     // Store a user-friendly search string that still includes the IMDbID.
     // App-level search logic will detect `tt...` and use only that for the actual search.
@@ -113,6 +130,7 @@ const SearchBar = ({ onSearch, onSaveSearch, isLoading, currentQuery }) => {
     } else if (e.key === 'Escape') {
       setShowSuggestions(false)
       setActiveIndex(-1)
+      setHoveredPoster(null)
     }
   }
 
@@ -121,6 +139,7 @@ const SearchBar = ({ onSearch, onSaveSearch, isLoading, currentQuery }) => {
     blurTimeoutRef.current = setTimeout(() => {
       setShowSuggestions(false)
       setActiveIndex(-1)
+      setHoveredPoster(null)
     }, 120)
   }
 
@@ -167,7 +186,9 @@ const SearchBar = ({ onSearch, onSaveSearch, isLoading, currentQuery }) => {
                           <img
                             src={posters[s.imdbId]}
                             alt={s.title}
-                            className="w-12 h-16 object-cover rounded flex-shrink-0"
+                            className="w-12 h-16 object-cover rounded flex-shrink-0 cursor-zoom-in"
+                            onMouseEnter={(e) => handlePosterMouseEnter(e, s.imdbId)}
+                            onMouseLeave={handlePosterMouseLeave}
                           />
                         )}
                         <div className="min-w-0">
@@ -202,6 +223,22 @@ const SearchBar = ({ onSearch, onSaveSearch, isLoading, currentQuery }) => {
                 ))}
               </ul>
             )}
+          </div>
+        )}
+
+        {hoveredPoster && posters[hoveredPoster] && (
+          <div
+            className="fixed z-[100] pointer-events-none"
+            style={{
+              top: posterPreviewPos.top,
+              left: posterPreviewPos.left
+            }}
+          >
+            <img
+              src={posters[hoveredPoster]}
+              alt="Poster preview"
+              className="w-48 h-72 object-cover rounded-lg shadow-2xl border border-gray-600"
+            />
           </div>
         )}
 
