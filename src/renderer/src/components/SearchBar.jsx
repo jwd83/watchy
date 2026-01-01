@@ -156,7 +156,7 @@ const SearchBar = ({ onSearch, onSaveSearch, isLoading, currentQuery }) => {
           onFocus={() => setShowSuggestions(true)}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
-          placeholder="Search for movies, shows, or PBS broadcasts..."
+          placeholder="Search for your favorites!"
           className="w-full px-6 py-4 text-lg bg-surface border border-gray-700 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent shadow-lg transition-all"
           disabled={isLoading}
           autoComplete="off"
