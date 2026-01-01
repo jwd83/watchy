@@ -4,7 +4,7 @@
 
 # Watchy
 
-**Watchy** allows you to search for P2P content, cache it using AllDebrid, stream or download it directly, and manage your personal library of favorite searches and magnets.
+**Watchy** helps you watch your favorites!
 
 ## Features
 
