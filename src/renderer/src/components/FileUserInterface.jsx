@@ -6,6 +6,12 @@ const FileUserInterface = ({ files, onPlay, watchedFiles = [], onSave, magnetDat
     return s.split('/').pop().split('\\').pop()
   }
 
+  const basenameWithoutExt = (p) => {
+    const base = basename(p)
+    const lastDot = base.lastIndexOf('.')
+    return lastDot > 0 ? base.substring(0, lastDot) : base
+  }
+
   const resolveLink = async (url) => {
     try {
       if (window?.api?.resolve) {
@@ -20,6 +26,36 @@ const FileUserInterface = ({ files, onPlay, watchedFiles = [], onSave, magnetDat
   // Natural sort comparator for filenames with episode numbers
   const naturalSort = (a, b) => {
     return a.filename.localeCompare(b.filename, undefined, { numeric: true, sensitivity: 'base' })
+  }
+
+  const subtitleExts = ['srt', 'sub', 'ass', 'ssa', 'vtt']
+
+  // Build a map of subtitle files by their base name (without extension)
+  const subtitleMap = new Map()
+  files.forEach((f) => {
+    const ext = f.filename.split('.').pop().toLowerCase()
+    if (subtitleExts.includes(ext)) {
+      const base = basenameWithoutExt(f.filename).toLowerCase()
+      if (!subtitleMap.has(base)) {
+        subtitleMap.set(base, f)
+      }
+    }
+  })
+
+  // Find matching subtitle for a video file
+  const findSubtitle = (videoFilename) => {
+    const videoBase = basenameWithoutExt(videoFilename).toLowerCase()
+    // Exact match first
+    if (subtitleMap.has(videoBase)) {
+      return subtitleMap.get(videoBase)
+    }
+    // Try to find a subtitle that starts with the video base name (e.g., "video.en.srt")
+    for (const [subBase, subFile] of subtitleMap.entries()) {
+      if (subBase.startsWith(videoBase) || videoBase.startsWith(subBase)) {
+        return subFile
+      }
+    }
+    return null
   }
 
   // Filter for video files and sort naturally
@@ -125,6 +161,7 @@ const FileUserInterface = ({ files, onPlay, watchedFiles = [], onSave, magnetDat
           </div>
           {videoFiles.map((file, index) => {
             const watched = isWatched(file.filename)
+            const subtitle = findSubtitle(file.filename)
             return (
               <div
                 key={index}
@@ -146,6 +183,14 @@ const FileUserInterface = ({ files, onPlay, watchedFiles = [], onSave, magnetDat
                       />
                     </svg>
                   )}
+                  {subtitle && (
+                    <span
+                      className="px-1.5 py-0.5 text-xs font-medium bg-blue-600 text-white rounded flex-shrink-0"
+                      title={`Subtitle: ${basename(subtitle.filename)}`}
+                    >
+                      SUB
+                    </span>
+                  )}
                   <span
                     className={`truncate ${watched ? 'text-gray-400' : ''}`}
                     title={file.filename}
@@ -155,7 +200,7 @@ const FileUserInterface = ({ files, onPlay, watchedFiles = [], onSave, magnetDat
                 </div>
                 <div className="flex gap-2 flex-shrink-0">
                   <button
-                    onClick={() => onPlay(file.link, file.filename)}
+                    onClick={() => onPlay(file.link, file.filename, subtitle?.link)}
                     className="px-4 py-2 bg-accent hover:bg-violet-600 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
                   >
                     Play in VLC

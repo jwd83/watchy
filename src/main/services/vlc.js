@@ -2,8 +2,6 @@ import { spawn } from 'child_process'
 
 class VLCService {
   sanitizeInput(input) {
-    // Some API responses may accidentally pass an object (e.g. { link: "..." })
-    // which would become "[object Object]" on the command line.
     let value = input
 
     if (value && typeof value === 'object') {
@@ -15,28 +13,27 @@ class VLCService {
     if (typeof value !== 'string') value = String(value ?? '')
 
     value = value.trim()
-
-    // Guard against HTML-escaped ampersands which break query strings.
     value = value.replaceAll('&amp;', '&')
 
-    // Only normalize URLs (do NOT encode local file paths).
-    if (/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(value)) {
+    if (value.includes('%3A') || value.includes('%2F')) {
       try {
-        value = encodeURI(value)
+        value = decodeURIComponent(value)
       } catch {
-        // ignore encoding errors; keep original
+        // ignore decode errors
       }
     }
 
     return value
   }
 
-  play(input) {
+  play(input, subtitleUrl = null) {
     const url = this.sanitizeInput(input)
-    console.log('Opening VLC with URL:', url)
-
     let command = 'vlc'
     const args = ['--fullscreen', '--no-video-title-show', url]
+
+    if (subtitleUrl) {
+      args.push(`--input-slave=${this.sanitizeInput(subtitleUrl)}`)
+    }
 
     if (process.platform === 'darwin') {
       command = '/Applications/VLC.app/Contents/MacOS/VLC'

@@ -335,9 +335,9 @@ function App() {
     return out
   }
 
-  const handlePlay = async (url, filename) => {
+  const handlePlay = async (url, filename, subtitleUrl = null) => {
     // main process will attempt to resolve AllDebrid links to a direct playable URL
-    const playableUrl = await window.api.play(url)
+    const playableUrl = await window.api.play(url, subtitleUrl)
 
     // Record play in history if we have current magnet context
     if (currentMagnet) {

@@ -275,8 +275,10 @@ app.whenReady().then(() => {
 
   // Resolve AllDebrid hoster links to a direct playable URL before launching VLC.
   // If the link is already playable, we fall back to the original.
-  ipcMain.handle('api:play', async (_, url) => {
+  // Optionally accepts a subtitle URL to pass to VLC.
+  ipcMain.handle('api:play', async (_, url, subtitleUrl = null) => {
     let playableUrl = url
+    let playableSubtitleUrl = subtitleUrl
 
     try {
       if (typeof url === 'string' && url.startsWith('http')) {
@@ -289,7 +291,21 @@ app.whenReady().then(() => {
       // ignore unlock failures; we'll try to play the original url
     }
 
-    vlc.play(playableUrl)
+    // Resolve subtitle URL if provided
+    if (subtitleUrl) {
+      try {
+        if (typeof subtitleUrl === 'string' && subtitleUrl.startsWith('http')) {
+          const unlock = await allDebrid.unlockLink(subtitleUrl)
+          if (unlock?.status === 'success' && unlock?.data?.link) {
+            playableSubtitleUrl = unlock.data.link
+          }
+        }
+      } catch {
+        // ignore unlock failures; we'll try to use the original subtitle url
+      }
+    }
+
+    vlc.play(playableUrl, playableSubtitleUrl)
     return playableUrl
   })
 
