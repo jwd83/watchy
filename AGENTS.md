@@ -89,6 +89,7 @@ Services are singleton instances in `src/main/services/`:
 - Caches AllDebrid magnet IDs by torrent hash for faster lookups
 - Prevents duplicate entries
 - Uses ISO timestamps for sorting
+- Tracks per-file watch state within history entries
 
 **mediaCatalog.js**
 
@@ -109,6 +110,15 @@ Notes on IMDbID searches:
 - `App.handleSearch()` will detect `tt\d{7,8}` anywhere in the query string and perform the actual P2P search using only the `tt...` token, while keeping the full string for saving/history clarity.
 - Search suggestions display poster images (48x64px) on the left side when available from `posters.db`
 
+### Download Queue
+
+The main process includes a `DownloadQueue` class that manages concurrent downloads:
+
+- Limits concurrent downloads (default: 3)
+- Queues additional downloads and processes them in order
+- Sends `download:progress` events to renderer with states: `queued`, `progressing`, `completed`, `failed`
+- Automatically records completed downloads to library history (when magnetTitle is provided)
+
 ### IPC Communication Pattern
 
 All communication between renderer and main follows this pattern:
@@ -117,6 +127,48 @@ All communication between renderer and main follows this pattern:
 2. Preload script invokes `ipcRenderer.invoke('api:methodName', args)`
 3. Main process handles via `ipcMain.handle('api:methodName', handler)`
 4. Returns Promise-based responses
+
+### IPC API Reference
+
+**Search & Catalog**
+
+- `search(query)` - Search P2P networks, enriches results with catalog metadata
+- `mediaSuggest(query, limit)` - Get autocomplete suggestions from media catalog
+- `getPosters(imdbIds)` - Get poster images by IMDb IDs
+
+**AllDebrid**
+
+- `unlock(magnet)` - Upload magnet to AllDebrid
+- `getStatus(id)` - Get magnet status (legacy)
+- `getStatusV41(params)` - Get magnet status using v4.1 API (supports filters)
+- `getMagnetFiles(ids)` - Get files for one or more magnet IDs
+- `getFiles(link)` - Unlock a hoster link
+- `resolve(url)` - Resolve hoster link to direct URL without playing
+- `saveKey(key)` / `getKey()` - Store/retrieve AllDebrid API key
+
+**Playback**
+
+- `play(url, subtitleUrl?)` - Resolve URL and launch VLC (optionally with subtitle)
+- `playFile(filePath)` - Play local file in VLC
+- `openFolder(filePath)` - Open containing folder in file explorer
+
+**Downloads**
+
+- `download(url, options)` - Queue a download (options: `{ directory, magnetTitle }`)
+- `selectFolder()` - Open folder selection dialog
+- `onDownloadProgress(callback)` - Subscribe to download progress events
+
+**Library & History**
+
+- `getSavedSearches()` / `addSavedSearch(query)` / `removeSavedSearch(id)`
+- `getSavedMagnets()` / `addSavedMagnet(magnetData)` / `removeSavedMagnet(id)`
+- `getHistory()` / `recordPlay(magnetHash, magnetTitle, filename, streamUrl)` / `removeHistoryEntry(id)` / `removeAllHistory()`
+- `resetFileWatched(historyId, filename)` - Mark a file as unwatched
+- `getMagnetIdByHash(hash)` / `setMagnetId(hash, id)` - Cache magnet IDs by hash
+
+**Download History**
+
+- `getDownloadHistory()` / `removeFromDownloadHistory(id)` / `clearDownloadHistory()`
 
 ### State Management
 
