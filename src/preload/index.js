@@ -42,6 +42,9 @@ const api = {
   getDownloadHistory: () => ipcRenderer.invoke('api:getDownloadHistory'),
   removeFromDownloadHistory: (id) => ipcRenderer.invoke('api:removeFromDownloadHistory', id),
   clearDownloadHistory: () => ipcRenderer.invoke('api:clearDownloadHistory'),
+  // Settings APIs
+  getShowNsfw: () => ipcRenderer.invoke('api:getShowNsfw'),
+  setShowNsfw: (value) => ipcRenderer.invoke('api:setShowNsfw', value),
   onDownloadProgress: (callback) => {
     const subscription = (event, data) => callback(data)
     ipcRenderer.on('download:progress', subscription)

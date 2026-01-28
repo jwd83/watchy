@@ -407,6 +407,15 @@ app.whenReady().then(() => {
     return library.clearDownloadHistory()
   })
 
+  // Settings handlers
+  ipcMain.handle('api:getShowNsfw', () => {
+    return library.getShowNsfw()
+  })
+
+  ipcMain.handle('api:setShowNsfw', (_, value) => {
+    return library.setShowNsfw(value)
+  })
+
   createWindow()
 
   app.on('activate', function () {

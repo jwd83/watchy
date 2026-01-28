@@ -31,7 +31,8 @@ class ScraperService {
           size: this.formatSize(parseInt(item.size)),
           magnet,
           link: magnet,
-          imdb: item.imdb || null
+          imdb: item.imdb || null,
+          category: parseInt(item.category) || 0
         }
       })
     } catch (error) {

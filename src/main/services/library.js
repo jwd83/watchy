@@ -3,6 +3,16 @@ import Store from 'electron-store'
 const store = new Store()
 
 class LibraryService {
+  // Settings
+  getShowNsfw() {
+    return store.get('showNsfw', false)
+  }
+
+  setShowNsfw(value) {
+    store.set('showNsfw', !!value)
+    return { success: true }
+  }
+
   // Saved Searches
   getSavedSearches() {
     return store.get('savedSearches', [])

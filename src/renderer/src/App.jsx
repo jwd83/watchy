@@ -10,8 +10,17 @@ import DownloadManager from './components/DownloadManager'
 import StatusModal from './components/StatusModal'
 import logo from './assets/logo.png'
 
+/**
+ * Check if a search result is NSFW based on Pirate Bay category codes.
+ * Categories 500-599 are adult content.
+ */
+function isNsfw(item) {
+  const category = item.category || 0
+  return category >= 500 && category < 600
+}
+
 function App() {
-  const [results, setResults] = useState([])
+  const [rawResults, setRawResults] = useState([])
   const [files, setFiles] = useState([])
   const [isLoading, setIsLoading] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
@@ -28,6 +37,11 @@ function App() {
   const [isDownloadModalDismissed, setIsDownloadModalDismissed] = useState(false)
   const [downloadHistory, setDownloadHistory] = useState([])
   const [currentMediaCatalogTitle, setCurrentMediaCatalogTitle] = useState(null)
+  const [showNsfw, setShowNsfw] = useState(false)
+
+  // Compute filtered results and hidden count based on showNsfw toggle
+  const results = showNsfw ? rawResults : rawResults.filter((item) => !isNsfw(item))
+  const nsfwHiddenCount = rawResults.length - results.length
 
   const viewRef = useRef(view)
   useEffect(() => {
@@ -39,6 +53,9 @@ function App() {
       if (!key) {
         setIsSettingsOpen(true)
       }
+    })
+    window.api.getShowNsfw().then((value) => {
+      setShowNsfw(value)
     })
     loadLibrary()
     loadHistory()
@@ -120,7 +137,7 @@ function App() {
     }
 
     setIsLoading(true)
-    setResults([])
+    setRawResults([])
     setFiles([])
     // Keep the full, user-visible string (e.g. "Title (Year) tt1234567") so saving/search history stays clear.
     setCurrentQuery(originalQuery)
@@ -128,7 +145,8 @@ function App() {
     setStatusModal({ message: 'Searching P2P networks...', type: 'loading' })
     try {
       const searchResults = await window.api.search(effectiveQuery)
-      setResults(searchResults)
+      setRawResults(searchResults)
+
       if (searchResults.length === 0) {
         setStatusModal({ message: 'No results found.', type: 'error' })
       } else {
@@ -349,6 +367,11 @@ function App() {
   const handleSaveSettings = async (key) => {
     await window.api.saveKey(key)
     setIsSettingsOpen(false)
+  }
+
+  const handleShowNsfwChange = async (enabled) => {
+    setShowNsfw(enabled)
+    await window.api.setShowNsfw(enabled)
   }
 
   const handleRemoveHistoryEntry = async (id) => {
@@ -580,6 +603,34 @@ function App() {
               </div>
             ) : (
               <div className="grid gap-4">
+                {rawResults.length > 0 && (
+                  <div className="flex items-center justify-between text-sm text-gray-500">
+                    <span>
+                      {results.length} result{results.length !== 1 ? 's' : ''}
+                      {nsfwHiddenCount > 0 && ` (${nsfwHiddenCount} NSFW hidden)`}
+                    </span>
+                    <button
+                      role="switch"
+                      aria-checked={showNsfw}
+                      aria-label="Show NSFW results"
+                      onClick={() => handleShowNsfwChange(!showNsfw)}
+                      className="flex items-center gap-2 cursor-pointer"
+                    >
+                      <span className="text-gray-400">NSFW</span>
+                      <span
+                        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                          showNsfw ? 'bg-primary' : 'bg-gray-600'
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                            showNsfw ? 'translate-x-5' : 'translate-x-1'
+                          }`}
+                        />
+                      </span>
+                    </button>
+                  </div>
+                )}
                 {results.map((result, index) => {
                   const imdbMatch = (currentQuery || '').match(/tt\d{7,8}/i)
                   const imdbId = imdbMatch ? imdbMatch[0] : result.imdb || null
