@@ -95,7 +95,6 @@ function App() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-
   const loadLibrary = async () => {
     const searches = await window.api.getSavedSearches()
     const magnets = await window.api.getSavedMagnets()
@@ -236,7 +235,8 @@ function App() {
     setStatusModal({ message: `Unlocking "${result.title}"...`, type: 'loading' })
 
     // Extract IMDb ID from result (preferred) or fall back to current query
-    const imdbId = result.imdbId || result.imdb || (currentQuery || '').match(/tt\d{7,8}/i)?.[0] || null
+    const imdbId =
+      result.imdbId || result.imdb || (currentQuery || '').match(/tt\d{7,8}/i)?.[0] || null
     setCurrentImdbId(imdbId)
 
     // Fetch poster for background if we have an IMDb ID
