@@ -38,6 +38,8 @@ function App() {
   const [downloadHistory, setDownloadHistory] = useState([])
   const [currentMediaCatalogTitle, setCurrentMediaCatalogTitle] = useState(null)
   const [showNsfw, setShowNsfw] = useState(false)
+  const [currentImdbId, setCurrentImdbId] = useState(null)
+  const [backgroundPoster, setBackgroundPoster] = useState(null)
 
   // Compute filtered results and hidden count based on showNsfw toggle
   const results = showNsfw ? rawResults : rawResults.filter((item) => !isNsfw(item))
@@ -93,6 +95,7 @@ function App() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
+
   const loadLibrary = async () => {
     const searches = await window.api.getSavedSearches()
     const magnets = await window.api.getSavedMagnets()
@@ -123,17 +126,25 @@ function App() {
     const imdbMatch = originalQuery.match(/tt\d{7,8}/i)
     const effectiveQuery = imdbMatch ? imdbMatch[0] : originalQuery
 
-    // Resolve canonical media catalog title for this search when an IMDb ID is present.
+    // Resolve canonical media catalog title and poster for this search when an IMDb ID is present.
     if (imdbMatch) {
+      const imdbId = imdbMatch[0]
+      setCurrentImdbId(imdbId)
       try {
         const suggestions = await window.api.mediaSuggest(effectiveQuery, 1)
         const first = Array.isArray(suggestions) && suggestions[0] ? suggestions[0] : null
         setCurrentMediaCatalogTitle(first ? first.title : null)
+        // Fetch poster for background
+        const postersMap = await window.api.getPosters([imdbId])
+        setBackgroundPoster(postersMap?.[imdbId] || null)
       } catch {
         setCurrentMediaCatalogTitle(null)
+        setBackgroundPoster(null)
       }
     } else {
       setCurrentMediaCatalogTitle(null)
+      setCurrentImdbId(null)
+      setBackgroundPoster(null)
     }
 
     setIsLoading(true)
@@ -177,9 +188,9 @@ function App() {
   }
 
   const handleSaveMagnet = async (result) => {
-    // Attempt to associate this magnet with an IMDb ID based on the current search query.
+    // Attempt to associate this magnet with an IMDb ID from query, result, or current state.
     const imdbMatch = (currentQuery || '').match(/tt\d{7,8}/i)
-    const imdbId = imdbMatch ? imdbMatch[0] : null
+    const imdbId = imdbMatch ? imdbMatch[0] : result.imdbId || result.imdb || currentImdbId || null
 
     const magnetData = {
       title: result.title,
@@ -210,6 +221,20 @@ function App() {
     setIsLoading(true)
     setView('search') // Switch to search view to show files
     setStatusModal({ message: `Unlocking "${result.title}"...`, type: 'loading' })
+
+    // Extract IMDb ID from result (preferred) or fall back to current query
+    const imdbId = result.imdbId || result.imdb || (currentQuery || '').match(/tt\d{7,8}/i)?.[0] || null
+    setCurrentImdbId(imdbId)
+
+    // Fetch poster for background if we have an IMDb ID
+    if (imdbId) {
+      window.api.getPosters([imdbId]).then((postersMap) => {
+        const posterUrl = postersMap?.[imdbId]
+        setBackgroundPoster(posterUrl || null)
+      })
+    } else {
+      setBackgroundPoster(null)
+    }
 
     // Store current magnet context for history tracking and favorites
     const hash = extractMagnetHash(result.magnet)
@@ -414,8 +439,19 @@ function App() {
     handleSelectResult(result)
   }
 
+  const showPosterBackground = view === 'search' && backgroundPoster
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background relative">
+      {/* Poster background with dark overlay */}
+      {showPosterBackground && (
+        <div
+          className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat transition-opacity duration-500"
+          style={{ backgroundImage: `url(${backgroundPoster})` }}
+        >
+          <div className="absolute inset-0 bg-background/85" />
+        </div>
+      )}
       {/* Full-width sticky top navigation */}
       <div
         className={`sticky top-0 z-20 border-b border-slate-800 ${
@@ -538,7 +574,7 @@ function App() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-8 pt-8">
+      <div className="max-w-7xl mx-auto px-8 pt-8 relative z-10">
         {view === 'history' ? (
           <History
             history={history}
@@ -582,6 +618,8 @@ function App() {
                   onClick={() => {
                     setFiles([])
                     setStatusModal(null)
+                    setCurrentImdbId(null)
+                    setBackgroundPoster(null)
                   }}
                   className="mb-4 text-sm text-gray-400 hover:text-white flex items-center gap-2"
                 >
