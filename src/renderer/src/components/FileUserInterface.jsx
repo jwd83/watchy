@@ -1,4 +1,4 @@
-const FileUserInterface = ({ files, onPlay, watchedFiles = [], onSave, magnetData }) => {
+const FileUserInterface = ({ files, onPlay, watchedFiles = [], onSave, magnetData, isSaved }) => {
   const basename = (p) => {
     if (!p) return ''
     const s = String(p)
@@ -75,8 +75,10 @@ const FileUserInterface = ({ files, onPlay, watchedFiles = [], onSave, magnetDat
         {onSave && magnetData && (
           <button
             onClick={() => onSave(magnetData)}
-            className="flex items-center gap-2 px-4 py-2 text-gray-400 hover:text-primary hover:bg-gray-700 transition-colors rounded-lg border border-gray-600"
-            title="Add to library"
+            className={`flex items-center gap-2 px-4 py-2 transition-colors rounded-lg border border-gray-600 ${
+              isSaved ? 'text-green-400 hover:text-green-300' : 'text-gray-400 hover:text-primary'
+            } hover:bg-gray-700`}
+            title={isSaved ? 'Remove from library' : 'Add to library'}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -86,7 +88,7 @@ const FileUserInterface = ({ files, onPlay, watchedFiles = [], onSave, magnetDat
             >
               <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
             </svg>
-            Add to Library
+            {isSaved ? 'Remove from Library' : 'Add to Library'}
           </button>
         )}
       </div>

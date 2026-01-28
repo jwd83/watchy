@@ -96,7 +96,7 @@ const ResultCard = ({ result, canonicalTitle, imdbId, onSelect, onSave, isSaved 
           className={`flex-shrink-0 p-2 transition-colors ${
             isSaved ? 'text-green-500' : 'text-gray-400 hover:text-primary'
           }`}
-          title={isSaved ? 'In library' : 'Save to library'}
+          title={isSaved ? 'Remove from library' : 'Save to library'}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"

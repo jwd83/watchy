@@ -188,6 +188,19 @@ function App() {
   }
 
   const handleSaveMagnet = async (result) => {
+    if (!result?.magnet) {
+      showToast('Missing magnet link', 'error')
+      return
+    }
+
+    const existing = savedMagnets.find((m) => m.magnet === result.magnet)
+    if (existing) {
+      const removeResult = await window.api.removeSavedMagnet(existing.id)
+      showToast(removeResult.message)
+      await loadLibrary()
+      return
+    }
+
     // Attempt to associate this magnet with an IMDb ID from query, result, or current state.
     const imdbMatch = (currentQuery || '').match(/tt\d{7,8}/i)
     const imdbId = imdbMatch ? imdbMatch[0] : result.imdbId || result.imdb || currentImdbId || null
@@ -637,6 +650,11 @@ function App() {
                   }
                   onSave={handleSaveMagnet}
                   magnetData={currentMagnet}
+                  isSaved={
+                    currentMagnet
+                      ? savedMagnets.some((m) => m.magnet === currentMagnet.magnet)
+                      : false
+                  }
                 />
               </div>
             ) : (
