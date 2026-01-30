@@ -459,7 +459,7 @@ function App() {
       {/* Poster background with dark overlay */}
       {showPosterBackground && (
         <div
-          className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat transition-opacity duration-500"
+          className="fixed inset-0 z-0 bg-contain bg-center bg-no-repeat bg-black transition-opacity duration-500"
           style={{ backgroundImage: `url(${backgroundPoster})` }}
         >
           <div className="absolute inset-0 bg-background/85" />
