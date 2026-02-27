@@ -1,4 +1,5 @@
 import { spawn } from 'child_process'
+import { existsSync } from 'fs'
 
 class VLCService {
   sanitizeInput(input) {
@@ -38,7 +39,12 @@ class VLCService {
     if (process.platform === 'darwin') {
       command = '/Applications/VLC.app/Contents/MacOS/VLC'
     } else if (process.platform === 'win32') {
-      command = 'C:\\Program Files\\VideoLAN\\VLC\\vlc.exe'
+      const candidates = [
+        'C:\\Program Files\\VideoLAN\\VLC\\vlc.exe',
+        'C:\\Program Files (x86)\\VideoLAN\\VLC\\vlc.exe'
+      ]
+      const found = candidates.find((p) => existsSync(p))
+      if (found) command = found
     }
 
     const vlcProcess = spawn(command, args, {
