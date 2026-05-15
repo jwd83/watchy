@@ -45,6 +45,9 @@ const api = {
   // Settings APIs
   getShowNsfw: () => ipcRenderer.invoke('api:getShowNsfw'),
   setShowNsfw: (value) => ipcRenderer.invoke('api:setShowNsfw', value),
+  getSubtitlesEnabledByDefault: () => ipcRenderer.invoke('api:getSubtitlesEnabledByDefault'),
+  setSubtitlesEnabledByDefault: (value) =>
+    ipcRenderer.invoke('api:setSubtitlesEnabledByDefault', value),
   onDownloadProgress: (callback) => {
     const subscription = (event, data) => callback(data)
     ipcRenderer.on('download:progress', subscription)

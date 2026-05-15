@@ -13,6 +13,15 @@ class LibraryService {
     return { success: true }
   }
 
+  getSubtitlesEnabledByDefault() {
+    return store.get('subtitlesEnabledByDefault', true)
+  }
+
+  setSubtitlesEnabledByDefault(value) {
+    store.set('subtitlesEnabledByDefault', !!value)
+    return { success: true }
+  }
+
   // Saved Searches
   getSavedSearches() {
     return store.get('savedSearches', [])

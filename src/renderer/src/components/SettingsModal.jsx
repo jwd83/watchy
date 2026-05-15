@@ -2,11 +2,15 @@ import { useState, useEffect } from 'react'
 
 const SettingsModal = ({ isOpen, onClose, onSave }) => {
   const [apiKey, setApiKey] = useState('')
+  const [subtitlesEnabledByDefault, setSubtitlesEnabledByDefault] = useState(true)
 
   useEffect(() => {
     if (isOpen) {
       window.api.getKey().then((key) => {
         if (key) setApiKey(key)
+      })
+      window.api.getSubtitlesEnabledByDefault().then((value) => {
+        setSubtitlesEnabledByDefault(value)
       })
     }
   }, [isOpen])
@@ -30,6 +34,36 @@ const SettingsModal = ({ isOpen, onClose, onSave }) => {
           <p className="mt-2 text-xs text-gray-500">Required to cache and stream torrents.</p>
         </div>
 
+        <div className="mb-6">
+          <label className="flex items-center justify-between gap-4 cursor-pointer">
+            <div>
+              <span className="block text-sm font-medium text-gray-300">
+                English subtitles by default
+              </span>
+              <span className="block mt-1 text-xs text-gray-500">
+                Prefer English subtitle tracks when VLC opens a video.
+              </span>
+            </div>
+            <span
+              className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors ${
+                subtitlesEnabledByDefault ? 'bg-primary' : 'bg-gray-600'
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={subtitlesEnabledByDefault}
+                onChange={(e) => setSubtitlesEnabledByDefault(e.target.checked)}
+                className="sr-only"
+              />
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  subtitlesEnabledByDefault ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </span>
+          </label>
+        </div>
+
         <div className="flex justify-end gap-3">
           <button
             onClick={onClose}
@@ -38,7 +72,7 @@ const SettingsModal = ({ isOpen, onClose, onSave }) => {
             Cancel
           </button>
           <button
-            onClick={() => onSave(apiKey)}
+            onClick={() => onSave({ apiKey, subtitlesEnabledByDefault })}
             className="px-6 py-2 bg-primary hover:bg-blue-600 text-white rounded-lg font-medium transition-colors"
           >
             Save

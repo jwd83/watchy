@@ -402,8 +402,9 @@ function App() {
     }
   }
 
-  const handleSaveSettings = async (key) => {
-    await window.api.saveKey(key)
+  const handleSaveSettings = async ({ apiKey, subtitlesEnabledByDefault }) => {
+    await window.api.saveKey(apiKey)
+    await window.api.setSubtitlesEnabledByDefault(subtitlesEnabledByDefault)
     setIsSettingsOpen(false)
   }
 

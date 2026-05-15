@@ -305,7 +305,9 @@ app.whenReady().then(() => {
       }
     }
 
-    vlc.play(playableUrl, playableSubtitleUrl)
+    vlc.play(playableUrl, playableSubtitleUrl, {
+      enableEnglishSubtitles: library.getSubtitlesEnabledByDefault()
+    })
     return playableUrl
   })
 
@@ -316,7 +318,9 @@ app.whenReady().then(() => {
 
   // Play local file in VLC
   ipcMain.handle('api:playFile', (_, filePath) => {
-    vlc.play(filePath)
+    vlc.play(filePath, null, {
+      enableEnglishSubtitles: library.getSubtitlesEnabledByDefault()
+    })
   })
 
   ipcMain.handle('api:download', (event, url, options = {}) => {
@@ -414,6 +418,14 @@ app.whenReady().then(() => {
 
   ipcMain.handle('api:setShowNsfw', (_, value) => {
     return library.setShowNsfw(value)
+  })
+
+  ipcMain.handle('api:getSubtitlesEnabledByDefault', () => {
+    return library.getSubtitlesEnabledByDefault()
+  })
+
+  ipcMain.handle('api:setSubtitlesEnabledByDefault', (_, value) => {
+    return library.setSubtitlesEnabledByDefault(value)
   })
 
   createWindow()

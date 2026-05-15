@@ -27,14 +27,20 @@ class VLCService {
     return value
   }
 
-  play(input, subtitleUrl = null) {
+  play(input, subtitleUrl = null, options = {}) {
     const url = this.sanitizeInput(input)
     let command = 'vlc'
-    const args = ['--fullscreen', '--no-video-title-show', url]
+    const args = ['--fullscreen', '--no-video-title-show']
+
+    if (options.enableEnglishSubtitles) {
+      args.push('--sub-language=eng,en,English')
+    }
 
     if (subtitleUrl) {
       args.push(`--input-slave=${this.sanitizeInput(subtitleUrl)}`)
     }
+
+    args.push(url)
 
     if (process.platform === 'darwin') {
       command = '/Applications/VLC.app/Contents/MacOS/VLC'
