@@ -242,3 +242,21 @@ All user data (API keys, saved searches, saved magnets) is stored via `electron-
 
 - **AllDebrid API Key**: Required for torrent caching/streaming functionality
 - **VLC Media Player**: Must be installed at default system location
+
+## Project Wiki
+
+This repository uses a persistent project wiki:
+
+- `raw/` stores immutable source evidence. Do not edit filed raw sources in place; add a new dated file when evidence changes.
+- `notebook/` stores rough notes, questions, hunches, and planning scraps. Treat it as context, not evidence.
+- `wiki/` stores LLM-maintained synthesis, source records, bug pages, indexes, and logs.
+
+When ingesting a new source:
+
+1. File the source under `raw/<category>/` with a dated, descriptive filename.
+2. Create or update a source record under `wiki/sources/`.
+3. Update any relevant topic, bug, architecture, or workflow pages under `wiki/`.
+4. Update `wiki/index.md`.
+5. Append a chronological entry to `wiki/log.md` using `## [YYYY-MM-DD] action | Title`.
+
+For bug screenshots, preserve the original image in `raw/bugs/`, record extracted visible text, note the visible UI context, and clearly separate observations from debugging inferences.

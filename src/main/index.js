@@ -11,6 +11,72 @@ import posters from './services/posters'
 const downloadTargets = new Map()
 const downloadMetadata = new Map() // url -> { magnetTitle }
 
+function getLiveWebContents(webContents) {
+  if (!webContents || webContents.isDestroyed()) {
+    return null
+  }
+
+  return webContents
+}
+
+function getLiveWindowWebContents(window) {
+  if (!window || window.isDestroyed()) {
+    return null
+  }
+
+  return getLiveWebContents(window.webContents)
+}
+
+function sendDownloadProgress(webContents, payload) {
+  const liveWebContents = getLiveWebContents(webContents)
+
+  if (!liveWebContents) {
+    return false
+  }
+
+  try {
+    liveWebContents.send('download:progress', payload)
+    return true
+  } catch (error) {
+    console.warn('Unable to send download progress update:', error)
+    return false
+  }
+}
+
+function safeDecodeFilename(filename = 'unknown') {
+  if (!filename) {
+    return 'unknown'
+  }
+
+  try {
+    return decodeURIComponent(filename)
+  } catch {
+    return filename
+  }
+}
+
+function readDownloadItem(item, readValue, fallback) {
+  try {
+    return readValue(item)
+  } catch (error) {
+    console.warn('Unable to read download item:', error)
+    return fallback
+  }
+}
+
+function getDownloadProgressData(item, magnetTitle, state) {
+  return {
+    filename: safeDecodeFilename(
+      readDownloadItem(item, (downloadItem) => downloadItem.getFilename(), 'unknown')
+    ),
+    magnetTitle,
+    receivedBytes: readDownloadItem(item, (downloadItem) => downloadItem.getReceivedBytes(), 0),
+    totalBytes: readDownloadItem(item, (downloadItem) => downloadItem.getTotalBytes(), 0),
+    savePath: readDownloadItem(item, (downloadItem) => downloadItem.getSavePath(), null),
+    state
+  }
+}
+
 // Download queue manager
 class DownloadQueue {
   constructor(maxConcurrent = 3) {
@@ -24,20 +90,28 @@ class DownloadQueue {
     this.mainWindow = window
   }
 
+  getLiveWebContents(sender = null) {
+    return getLiveWindowWebContents(this.mainWindow) || getLiveWebContents(sender)
+  }
+
+  sendProgress(payload, sender = null) {
+    return sendDownloadProgress(this.getLiveWebContents(sender), payload)
+  }
+
   add(url, options, sender) {
-    const filename = decodeURIComponent(url.split('/').pop().split('?')[0] || 'unknown')
+    const filename = safeDecodeFilename(url.split('/').pop().split('?')[0] || 'unknown')
     const magnetTitle = options.magnetTitle || null
     this.queue.push({ url, options, sender, filename, magnetTitle })
 
-    // Notify renderer about queued download
-    if (this.mainWindow) {
-      this.mainWindow.webContents.send('download:progress', {
+    this.sendProgress(
+      {
         filename,
         magnetTitle,
         state: 'queued',
         queuePosition: this.queue.length
-      })
-    }
+      },
+      sender
+    )
 
     this.processQueue()
   }
@@ -57,11 +131,26 @@ class DownloadQueue {
     if (magnetTitle) {
       downloadMetadata.set(url, { magnetTitle })
     }
-    sender.downloadURL(url)
+
+    const webContents = this.getLiveWebContents(sender)
+
+    if (!webContents) {
+      console.warn(`Unable to start download because the renderer was destroyed: ${url}`)
+      this.onDownloadComplete(url)
+      return
+    }
+
+    try {
+      webContents.downloadURL(url)
+    } catch (error) {
+      console.warn('Unable to start download:', error)
+      this.onDownloadComplete(url)
+    }
   }
 
   onDownloadComplete(url) {
     this.activeDownloads.delete(url)
+    downloadTargets.delete(url)
     downloadMetadata.delete(url)
     this.processQueue()
   }
@@ -118,49 +207,56 @@ function createWindow() {
   })
 
   // Track downloads
-  mainWindow.webContents.session.on('will-download', (event, item) => {
-    const url = item.getURL()
+  const downloadSession = mainWindow.webContents.session
+  const handleWillDownload = (_event, item) => {
+    const url = readDownloadItem(item, (downloadItem) => downloadItem.getURL(), null)
+
+    if (!url) {
+      return
+    }
+
     const metadata = downloadMetadata.get(url) || {}
     const magnetTitle = metadata.magnetTitle || null
 
     if (downloadTargets.has(url)) {
       const directory = downloadTargets.get(url)
-      const filename = item.getFilename()
-      item.setSavePath(path.join(directory, filename))
+      const filename = readDownloadItem(
+        item,
+        (downloadItem) => downloadItem.getFilename(),
+        'unknown'
+      )
+
+      try {
+        item.setSavePath(path.join(directory, filename))
+      } catch (error) {
+        console.warn('Unable to set download save path:', error)
+      }
+
       // cleanup
       downloadTargets.delete(url)
     }
 
-    item.on('updated', (event, state) => {
+    item.on('updated', (_event, state) => {
       if (state === 'interrupted') {
         console.log('Download is interrupted but can be resumed')
       } else if (state === 'progressing') {
-        if (item.isPaused()) {
+        const isPaused = readDownloadItem(item, (downloadItem) => downloadItem.isPaused(), false)
+
+        if (isPaused) {
           console.log('Download is paused')
         } else {
-          // Send progress to renderer
-          mainWindow.webContents.send('download:progress', {
-            filename: decodeURIComponent(item.getFilename()),
-            magnetTitle,
-            receivedBytes: item.getReceivedBytes(),
-            totalBytes: item.getTotalBytes(),
-            savePath: item.getSavePath(),
-            state: 'progressing'
-          })
+          downloadQueue.sendProgress(getDownloadProgressData(item, magnetTitle, 'progressing'))
         }
       }
     })
 
-    item.once('done', (event, state) => {
-      const itemUrl = item.getURL()
-      const downloadData = {
-        filename: decodeURIComponent(item.getFilename()),
+    item.once('done', (_event, state) => {
+      const itemUrl = readDownloadItem(item, (downloadItem) => downloadItem.getURL(), url)
+      const downloadData = getDownloadProgressData(
+        item,
         magnetTitle,
-        savePath: item.getSavePath(),
-        state: state === 'completed' ? 'completed' : 'failed',
-        receivedBytes: item.getReceivedBytes(),
-        totalBytes: item.getTotalBytes()
-      }
+        state === 'completed' ? 'completed' : 'failed'
+      )
 
       if (state === 'completed') {
         console.log('Download successfully')
@@ -168,15 +264,29 @@ function createWindow() {
         console.log(`Download failed: ${state}`)
       }
 
-      // Add to download history (only if magnetTitle is present)
-      if (magnetTitle) {
-        library.addToDownloadHistory(downloadData)
+      try {
+        // Add to download history (only if magnetTitle is present)
+        if (magnetTitle) {
+          library.addToDownloadHistory(downloadData)
+        }
+      } catch (error) {
+        console.warn('Unable to add download to history:', error)
+      } finally {
+        downloadQueue.sendProgress(downloadData)
+        // Notify queue that download is complete so next can start
+        downloadQueue.onDownloadComplete(itemUrl)
       }
-
-      mainWindow.webContents.send('download:progress', downloadData)
-      // Notify queue that download is complete so next can start
-      downloadQueue.onDownloadComplete(itemUrl)
     })
+  }
+
+  downloadSession.on('will-download', handleWillDownload)
+
+  mainWindow.on('closed', () => {
+    if (downloadQueue.mainWindow === mainWindow) {
+      downloadQueue.setMainWindow(null)
+    }
+
+    downloadSession.removeListener('will-download', handleWillDownload)
   })
 
   // HMR for renderer base on electron-vite cli.
