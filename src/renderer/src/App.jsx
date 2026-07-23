@@ -229,6 +229,48 @@ function App() {
     await loadLibrary()
   }
 
+  // Helper: Load all files for a magnet from AllDebrid, returns array of { filename, link }
+  const loadMagnetFiles = async (result) => {
+    const hash = extractMagnetHash(result.magnet)
+
+    // Try cached magnet ID first
+    const existingId = await window.api.getMagnetIdByHash(hash)
+    if (existingId) {
+      const st = await window.api.getStatusV41({ id: existingId })
+      const m = st?.data?.magnets?.[0]
+      if (m && m.statusCode === 4) {
+        const filesRes = await window.api.getMagnetFiles([existingId])
+        let unlockedFiles = flattenMagnetFilesResponse(filesRes)
+        if (unlockedFiles.length === 0) {
+          const legacy = await window.api.getStatus(existingId)
+          const links = extractLinksFromLegacyStatus(legacy, existingId)
+          unlockedFiles = await unlockLinksToFiles(links)
+        }
+        if (unlockedFiles.length > 0) return unlockedFiles
+      }
+    }
+
+    // Upload path: upload magnet (API returns id + ready flag)
+    const uploadResponse = await window.api.unlock(result.magnet)
+    if (uploadResponse.status === 'success' && uploadResponse?.data?.magnets?.length) {
+      const { id: magnetId, ready } = uploadResponse.data.magnets[0]
+      await window.api.setMagnetId(hash, magnetId)
+
+      if (ready) {
+        const filesRes = await window.api.getMagnetFiles([magnetId])
+        let unlockedFiles = flattenMagnetFilesResponse(filesRes)
+        if (unlockedFiles.length === 0) {
+          const legacy = await window.api.getStatus(magnetId)
+          const links = extractLinksFromLegacyStatus(legacy, magnetId)
+          unlockedFiles = await unlockLinksToFiles(links)
+        }
+        return unlockedFiles
+      }
+    }
+
+    return []
+  }
+
   const handleSelectResult = async (result) => {
     setIsLoading(true)
     setView('search') // Switch to search view to show files
@@ -261,63 +303,57 @@ function App() {
     })
 
     try {
-      // 1) Fast path: if we've seen this magnet before, try its saved id.
-      const existingId = await window.api.getMagnetIdByHash(hash)
-      if (existingId) {
-        const st = await window.api.getStatusV41({ id: existingId })
-        const m = st?.data?.magnets?.[0]
-        if (m && m.statusCode === 4) {
-          const filesRes = await window.api.getMagnetFiles([existingId])
-          let unlockedFiles = flattenMagnetFilesResponse(filesRes)
-          if (unlockedFiles.length === 0) {
-            // Fallback: use legacy status links + unlock
-            const legacy = await window.api.getStatus(existingId)
-            const links = extractLinksFromLegacyStatus(legacy, existingId)
-            unlockedFiles = await unlockLinksToFiles(links)
-          }
-          if (unlockedFiles.length > 0) {
-            setFiles(unlockedFiles)
-            setStatusModal({ message: 'Ready to play!', type: 'success' })
-            setIsLoading(false)
-            return
-          }
-        }
-        // If not ready or files missing, fall through to upload path.
-      }
-
-      // 2) Upload path: upload magnet (API returns id + ready flag)
-      const uploadResponse = await window.api.unlock(result.magnet)
-      if (uploadResponse.status === 'success' && uploadResponse?.data?.magnets?.length) {
-        const { id: magnetId, ready } = uploadResponse.data.magnets[0]
-
-        // Save mapping for next time
-        await window.api.setMagnetId(hash, magnetId)
-
-        if (ready) {
-          // Instantly available — fetch files directly
-          const filesRes = await window.api.getMagnetFiles([magnetId])
-          let unlockedFiles = flattenMagnetFilesResponse(filesRes)
-          if (unlockedFiles.length === 0) {
-            // Fallback: use legacy status links + unlock
-            const legacy = await window.api.getStatus(magnetId)
-            const links = extractLinksFromLegacyStatus(legacy, magnetId)
-            unlockedFiles = await unlockLinksToFiles(links)
-          }
-          if (unlockedFiles.length > 0) {
-            setFiles(unlockedFiles)
-            setStatusModal({ message: 'Ready to play!', type: 'success' })
-          } else {
-            setStatusModal({ message: 'No files found for this magnet.', type: 'error' })
-          }
-        } else {
-          setStatusModal({ message: 'Caching on AllDebrid. Try again shortly.', type: 'error' })
-        }
+      const unlockedFiles = await loadMagnetFiles(result)
+      if (unlockedFiles.length > 0) {
+        setFiles(unlockedFiles)
+        setStatusModal({ message: 'Ready to play!', type: 'success' })
       } else {
-        setStatusModal({ message: 'Failed to upload magnet.', type: 'error' })
+        setStatusModal({ message: 'No files found for this magnet.', type: 'error' })
       }
     } catch (error) {
       console.error(error)
       setStatusModal({ message: 'Error unlocking torrent. Check API Key.', type: 'error' })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handlePlayNextFromHistory = async (entry) => {
+    const magnetLink = `magnet:?xt=urn:btih:${entry.magnetHash}`
+    const result = { magnet: magnetLink, title: entry.magnetTitle }
+
+    setStatusModal({ message: `Loading "${entry.magnetTitle}"...`, type: 'loading' })
+    setIsLoading(true)
+
+    try {
+      const allFiles = await loadMagnetFiles(result)
+      if (allFiles.length === 0) {
+        setStatusModal({ message: 'No files found for this magnet.', type: 'error' })
+        return
+      }
+
+      // Set context for history tracking
+      const hash = extractMagnetHash(result.magnet)
+      setCurrentMagnet({
+        hash,
+        title: entry.magnetTitle,
+        magnet: result.magnet,
+      })
+
+      // Find first unwatched file
+      const watchedSet = new Set(entry.files.map((f) => f.filename))
+      const nextFile = allFiles.find((f) => !watchedSet.has(f.filename))
+
+      if (nextFile) {
+        setStatusModal({ message: 'Starting playback...', type: 'loading' })
+        await handlePlay(nextFile.link, nextFile.filename)
+        setStatusModal(null)
+      } else {
+        setStatusModal({ message: 'All files in this magnet have been played.', type: 'error' })
+      }
+    } catch (error) {
+      console.error(error)
+      setStatusModal({ message: 'Error loading magnet files.', type: 'error' })
     } finally {
       setIsLoading(false)
     }
@@ -598,6 +634,7 @@ function App() {
             onPlayFile={async (url) => {
               await window.api.play(url)
             }}
+            onPlayNext={handlePlayNextFromHistory}
             onViewMagnet={handleViewMagnetFromHistory}
           />
         ) : view === 'library' ? (

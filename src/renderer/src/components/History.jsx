@@ -10,6 +10,7 @@ const History = ({
   onRemoveAll,
   onResetFile,
   onPlayFile,
+  onPlayNext,
   onViewMagnet
 }) => {
   return (
@@ -71,79 +72,103 @@ const History = ({
               </div>
 
               <div className="space-y-2 mb-4">
-                {entry.files.map((file, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between p-3 bg-background rounded-lg group"
-                  >
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5 text-green-500 flex-shrink-0"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      <div className="flex-1 min-w-0">
-                        <div className="truncate text-sm" title={file.filename}>
-                          {basename(file.filename)}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          Played {file.playCount} {file.playCount === 1 ? 'time' : 'times'} · Last
-                          played {new Date(file.playedAt).toLocaleString()}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex gap-2 ml-4">
-                      <button
-                        onClick={() => onPlayFile(file.streamUrl)}
-                        className="px-3 py-1.5 bg-accent hover:bg-violet-600 text-white rounded-lg text-sm font-medium transition-colors"
-                        title="Play again"
-                      >
-                        Play
-                      </button>
-                      <button
-                        onClick={() => onResetFile(entry.id, file.filename)}
-                        className="px-3 py-1.5 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg text-sm transition-colors"
-                        title="Remove from watched"
-                      >
+                {[...entry.files]
+                  .sort((a, b) => new Date(b.playedAt) - new Date(a.playedAt))
+                  .slice(0, 3)
+                  .map((file, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-3 bg-background rounded-lg group"
+                    >
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
-                          className="h-4 w-4"
+                          className="h-5 w-5 text-green-500 flex-shrink-0"
                           viewBox="0 0 20 20"
                           fill="currentColor"
                         >
                           <path
                             fillRule="evenodd"
-                            d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
                             clipRule="evenodd"
                           />
                         </svg>
-                      </button>
+                        <div className="flex-1 min-w-0">
+                          <div className="truncate text-sm" title={file.filename}>
+                            {basename(file.filename)}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            Played {file.playCount} {file.playCount === 1 ? 'time' : 'times'} · Last
+                            played {new Date(file.playedAt).toLocaleString()}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 ml-4">
+                        <button
+                          onClick={() => onPlayFile(file.streamUrl)}
+                          className="px-3 py-1.5 bg-accent hover:bg-violet-600 text-white rounded-lg text-sm font-medium transition-colors"
+                          title="Play again"
+                        >
+                          Play
+                        </button>
+                        <button
+                          onClick={() => onResetFile(entry.id, file.filename)}
+                          className="px-3 py-1.5 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg text-sm transition-colors"
+                          title="Remove from watched"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-4 w-4"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                {entry.files.length > 3 && (
+                  <p className="text-xs text-gray-500 pl-3">
+                    + {entry.files.length - 3} more file{entry.files.length - 3 === 1 ? '' : 's'} not shown
+                  </p>
+                )}
               </div>
-              <button
-                onClick={() => onViewMagnet(entry.magnetHash, entry.magnetTitle)}
-                className="w-full px-4 py-2 bg-primary hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
+              <div className="flex gap-2">
+                <button
+                  onClick={() => onPlayNext(entry)}
+                  className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
                 >
-                  <path d="M9 2a2 2 0 00-2 2v8a2 2 0 002 2h6a2 2 0 002-2V6.414A2 2 0 0016.414 5L14 2.586A2 2 0 0012.586 2H9z" />
-                  <path d="M3 8a2 2 0 012-2v10h8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
-                </svg>
-                View All Files
-              </button>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+                  </svg>
+                  Play Next Unplayed
+                </button>
+                <button
+                  onClick={() => onViewMagnet(entry.magnetHash, entry.magnetTitle)}
+                  className="flex-1 px-4 py-2 bg-primary hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path d="M9 2a2 2 0 00-2 2v8a2 2 0 002 2h6a2 2 0 002-2V6.414A2 2 0 0016.414 5L14 2.586A2 2 0 0012.586 2H9z" />
+                    <path d="M3 8a2 2 0 012-2v10h8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
+                  </svg>
+                  View All Files
+                </button>
+              </div>
             </div>
           ))}
         </div>
