@@ -11,7 +11,7 @@ const stateLabel = (download) => {
 }
 
 /** One in-progress/finished download row. Shared by the overlay and the Downloads page. */
-const DownloadItem = ({ download, className }) => (
+const DownloadItem = ({ download, className, onPlay }) => (
   <div className={className}>
     <div className="flex justify-between items-center mb-1">
       <span className="text-sm text-gray-200 truncate pr-2" title={download.filename}>
@@ -45,7 +45,7 @@ const DownloadItem = ({ download, className }) => (
         </button>
         <button
           type="button"
-          onClick={() => window.api.playFile(download.savePath)}
+          onClick={() => onPlay(download.savePath)}
           className="text-xs px-2 py-1 bg-accent hover:bg-accent/80 rounded transition-colors"
         >
           ▶️ Play in VLC
@@ -65,13 +65,20 @@ const DownloadManager = ({
   onDismiss,
   downloadHistory = [],
   onRemoveFromHistory,
-  onClearHistory
+  onClearHistory,
+  onPlayError
 }) => {
   const [isVisible, setIsVisible] = useState(false)
   const [shouldRender, setShouldRender] = useState(false)
   const [collapsedGroups, setCollapsedGroups] = useState({})
 
   const isOverlay = variant === 'overlay'
+
+  // VLC is launched detached in the main process, so a failed launch only comes back here.
+  const handlePlayFile = async (filePath) => {
+    const { error } = await window.api.playFile(filePath)
+    if (error) onPlayError?.(error)
+  }
 
   const activeCount = useMemo(() => {
     return downloads.filter((d) => d.state === 'progressing').length
@@ -154,8 +161,9 @@ const DownloadManager = ({
             <div className="space-y-2">
               {downloads.map((download) => (
                 <DownloadItem
-                  key={download.filename}
+                  key={download.id}
                   download={download}
+                  onPlay={handlePlayFile}
                   className="p-3 bg-background rounded-lg border border-gray-700/60"
                 />
               ))}
@@ -296,7 +304,7 @@ const DownloadManager = ({
                                   type="button"
                                   onClick={(e) => {
                                     e.stopPropagation()
-                                    window.api.playFile(historyItem.savePath)
+                                    handlePlayFile(historyItem.savePath)
                                   }}
                                   className="text-xs px-2 py-1 bg-accent hover:bg-accent/80 rounded transition-colors"
                                 >
@@ -360,8 +368,9 @@ const DownloadManager = ({
       <div className="max-h-64 overflow-y-auto">
         {downloads.map((download) => (
           <DownloadItem
-            key={download.filename}
+            key={download.id}
             download={download}
+            onPlay={handlePlayFile}
             className="p-3 border-b border-gray-700 last:border-0 hover:bg-gray-800 transition-colors"
           />
         ))}

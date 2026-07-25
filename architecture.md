@@ -32,7 +32,6 @@ Watchy is a cross-platform Electron desktop app that lets users:
 - `src/renderer` – React application (index HTML + React SPA under `src/renderer/src`).
 - `build/` – Icons and entitlement files used in packaged builds.
 - `media_catalog.db` – SQLite database bundled with the app for media suggestions.
-- `posters.db` – SQLite database bundled with the app for poster images.
 - `builder.py`, `electron-builder.yml`, `electron.vite.config.mjs` – Packaging and release tooling.
 
 ## Process Architecture
@@ -72,27 +71,30 @@ Responsibilities:
 - Maintains a global `Map downloadTargets: url -> directory`.
 - Implements a `DownloadQueue` class with:
   - `maxConcurrent` (default 3 concurrent active downloads).
-  - `queue` (FIFO list of pending downloads `{ url, options, sender, filename }`).
+  - `queue` (FIFO list of pending downloads `{ id, url, options, sender, filename, magnetTitle }`), where `id` is a `randomUUID()` assigned at enqueue time.
   - `activeDownloads` (set of URLs currently downloading).
   - `mainWindow` reference for sending progress events.
 - Public methods:
   - `setMainWindow(window)` – attach window for IPC updates.
-  - `add(url, options, sender)` – enqueue download; if `options.directory` is provided, record in `downloadTargets`. Also emits an initial `download:progress` event with state `queued` and queue position.
+  - `add(url, options, sender)` – assign an `id` and enqueue the download. Also emits an initial `download:progress` event carrying that `id`, state `queued`, and queue position.
   - `processQueue()` – start new downloads until `maxConcurrent` is reached.
-  - `startDownload(url, options, sender)` – calls `sender.downloadURL(url)` to trigger Electron's download mechanism.
+  - `startDownload(id, url, options, sender, magnetTitle)` – records `downloadTargets` (when `options.directory` is set) and `downloadMetadata` (`url -> { id, magnetTitle }`), then calls `sender.downloadURL(url)` to trigger Electron's download mechanism.
   - `onDownloadComplete(url)` – remove from `activeDownloads` and reprocess queue.
 
 `BrowserWindow.webContents.session.on('will-download')` is used to:
 
 - Re-map download path based on `downloadTargets` (if a target directory was specified from the renderer).
+- Recover the queue `id` and `magnetTitle` for the URL from `downloadMetadata`, falling back to the URL as the id for downloads that did not originate from the queue.
 - Track progress via `item.on('updated')` and send `download:progress` events with:
-  - `filename`, `receivedBytes`, `totalBytes`, `savePath`, `state: 'progressing'`.
+  - `id`, `filename`, `magnetTitle`, `receivedBytes`, `totalBytes`, `savePath`, `state: 'progressing'`.
 - On completion (`item.once('done')`), emit a final `download:progress` event with:
-  - `filename`, `savePath`, `state: 'completed' | 'failed'`, `receivedBytes`, `totalBytes`.
+  - `id`, `filename`, `magnetTitle`, `savePath`, `state: 'completed' | 'failed'`, `receivedBytes`, `totalBytes`.
 - Persist a download history entry via `library.addToDownloadHistory`.
 - Notify `downloadQueue.onDownloadComplete(itemUrl)`.
 
-The renderer listens for `download:progress` via the preload bridge.
+The renderer listens for `download:progress` via the preload bridge and keys download rows by `id`.
+Filenames are not unique – two magnets can both contain `S01E01.mkv`, and keying on the name would
+let them overwrite each other's progress.
 
 #### App Lifecycle
 
@@ -128,9 +130,10 @@ Exposed methods under `window.api`:
   - `getFiles(link)` → `api:getFiles` (v4 link/unlock).
   - `resolve(url)` → `api:resolve` (main attempts to unlock a hoster URL; falls back to original URL).
 - VLC playback and file system:
-  - `play(url)` → `api:play` (resolve and open in VLC).
+  - `play(url, subtitleUrl?)` → `api:play` (resolve and open in VLC). Resolves to `{ url, error? }`.
   - `openFolder(filePath)` → `api:openFolder` (show in file explorer).
-  - `playFile(filePath)` → `api:playFile` (launch VLC with local path).
+  - `playFile(filePath)` → `api:playFile` (launch VLC with local path). Resolves to `{ error? }`.
+  - VLC is spawned detached, so a failed launch (typically VLC not installed) cannot surface on its own. Both handlers await the spawn and return the failure as an `error` string for the renderer to show as a toast.
 - Downloads:
   - `download(url, options)` → `api:download` (`options` may contain `directory`).
   - `selectFolder()` → `api:selectFolder` (open-directory dialog; returns selected path or `null`).
@@ -282,34 +285,27 @@ Return shape: array of rows with fields `{ title, year, imdbId, type, primaryGen
 
 ### PostersService (`posters.js`)
 
-Read-only access to `posters.db` using `better-sqlite3`.
+Posters are served remotely from `https://posters.jwd.me`. There is no local poster database.
 
 Responsibilities:
 
-- Find and open `posters.db` in dev and prod builds.
-- Provide `getPostersByImdbIds(ids)` for retrieving poster images.
+- Load and cache the poster catalog from `https://posters.jwd.me/catalog.txt` (kicked off on module import).
+- Provide `getPostersByImdbIds(ids)` for resolving IMDb IDs to poster URLs.
 
-DB location resolution (`getPostersDbPath`):
+Catalog format and parsing:
 
-- Prod: `path.join(process.resourcesPath, 'posters.db')`.
-- Dev candidates (first existing path is used):
-  1. `path.join(app.getAppPath(), 'posters.db')`.
-  2. `path.join(__dirname, '../../../posters.db')` (accounting for compiled main path).
-  3. `path.join(process.cwd(), 'posters.db')`.
+- Plain text, one filename per line, each shaped `{imdbId}.{ext}` (for example `tt1234567.webp`).
+- Lines whose stem does not match `^tt\d+$` are ignored.
+- Parsed into an in-memory `Map<imdbId, filename>`.
+- The in-flight load is memoized. A failed load marks the catalog unloaded, and the next
+  `getPostersByImdbIds` call retries once before giving up, so a transient network failure is not
+  fatal for the rest of the session.
 
-Query used by `getPostersByImdbIds`:
+`getPostersByImdbIds(ids)` awaits the catalog, then maps each known ID to
+`https://posters.jwd.me/raw/{filename}`.
 
-```sql
-SELECT
-  IMDbID AS imdbId,
-  webp
-FROM posters
-WHERE IMDbID IN (?, ?, ...);
-```
-
-The service converts the `webp` BLOB to a base64-encoded data URL (`data:image/webp;base64,...`) for direct use in the renderer.
-
-Return shape: `Map<imdbId, dataUrl>` where `dataUrl` is a string like `data:image/webp;base64,<base64String>`.
+Return shape: a plain object `{ [imdbId]: url }`. IDs absent from the catalog are omitted, and every
+failure path returns `{}` so callers can always index the result.
 
 ### ScraperService (`scraper.js`)
 
@@ -438,8 +434,9 @@ When a user selects a search result (from search results or library):
   - `handlePlay(url, filename)` is called.
   - Calls `window.api.play(url)`:
     - On the main side: tries to unlock the link via AllDebrid; if successful, uses the unlocked `data.link`; otherwise falls back to original URL.
-    - Passes the resolved `playableUrl` to `vlc.play`.
-  - If `currentMagnet` exists, calls `window.api.recordPlay(currentMagnet.hash, currentMagnet.title, filename, playableUrl)` and reloads history.
+    - Passes the resolved `playableUrl` to `vlc.play` and waits for the process to spawn.
+  - If the reply carries an `error`, shows it as a toast and records nothing – nothing played.
+  - Otherwise, if `currentMagnet` exists, calls `window.api.recordPlay(currentMagnet.hash, currentMagnet.title, filename, playableUrl)` and reloads history.
 
 The History view can also replay `streamUrl` directly or reconstruct a magnet from `magnetHash` and re-run the unlock flow.
 
@@ -489,7 +486,7 @@ Key behaviors:
 
 - Maintains its own `query` string (not directly synced to `currentQuery` from `App`).
 - Uses `window.api.mediaSuggest` with a small debounce (150 ms) and a request id to avoid race conditions.
-- After receiving suggestions, fetches poster images via `window.api.getPosters(imdbIds)` for suggestions with IMDb IDs.
+- After receiving suggestions, fetches poster URLs via `window.api.getPosters(imdbIds)` in a single batched call for suggestions with IMDb IDs.
 - Suggestion items include title, year, type, primary genre, runtime, IMDb rating, votes, and a poster image (48x64px) when available.
 - Picking a suggestion formats a display string like `"Title (Year) [tt1234567]"` and passes it to `onSearch`.
 - Provides a button to save the `currentQuery` (provided by `App`) as a saved search.
@@ -517,7 +514,7 @@ Key behaviors:
 
 ### Electron Builder
 
-- Configured via `electron-builder.yml` (not detailed here; responsible for bundling `media_catalog.db`, `posters.db`, and icons into `resources`).
+- Configured via `electron-builder.yml` (not detailed here; responsible for bundling `media_catalog.db` and icons into `resources`).
 - `builder.py` is a release helper that:
   - Optionally bumps version and tags releases.
   - Pushes a git tag of the form `v<version>`.
@@ -533,9 +530,9 @@ Key behaviors:
 - **Network access**:
   - To `https://apibay.org` for torrent search.
   - To `https://api.alldebrid.com` for AllDebrid operations.
+  - To `https://posters.jwd.me` for the poster catalog and poster images. Posters simply do not render when it is unreachable.
 - **Local databases**:
   - `media_catalog.db` (bundled): SQLite database for media metadata and search suggestions.
-  - `posters.db` (bundled): SQLite database for poster images mapped by IMDbID.
 
 ## Reimplementation Notes
 
@@ -546,7 +543,7 @@ When rebuilding this app from scratch, preserve these key contracts:
 3. **Persistent data model** in `electron-store` for saved searches, library entries, magnet ID map, history, and download history.
 4. **Download queue semantics** (max 3 concurrent, queued state, progress events, and final history entry creation).
 5. **Media catalog query behavior** so that search suggestions and canonical titles work the same way.
-6. **Poster lookup behavior** using `posters.db` with IMDbID → webp BLOB mapping, returning base64 data URLs for display in the search suggestions UI.
+6. **Poster lookup behavior** using the remote `posters.jwd.me` catalog with IMDbID → filename mapping, returning image URLs, batched into one request per view.
 7. **AllDebrid interactions**: use the same endpoints and response expectations, including v4.1 magnet/files and fallback to v4 link/unlock.
 8. **VLC launching behavior** with platform-specific paths and URL sanitation.
 9. **Overall UX flow**: search → select result → upload/unlock magnet → choose file → play or download → track history and download history.

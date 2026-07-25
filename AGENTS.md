@@ -79,6 +79,7 @@ Services are singleton instances in `src/main/services/`:
 **vlc.js**
 
 - Spawns VLC Media Player with streaming URLs
+- `play()` returns a promise that resolves once the process has actually spawned and rejects otherwise, so a missing VLC can be surfaced in the UI instead of only logged
 - Platform-specific VLC paths:
   - macOS: `/Applications/VLC.app/Contents/MacOS/VLC`
   - Windows: `C:\Program Files\VideoLAN\VLC\vlc.exe`
@@ -99,16 +100,17 @@ Services are singleton instances in `src/main/services/`:
 
 **posters.js**
 
-- Reads a local SQLite database `posters.db` (readonly) using `better-sqlite3`
-- Stores poster images as webp BLOBs indexed by IMDbID
-- Provides poster lookup by IMDbID, returning base64 data URLs for display
+- Fetches a remote poster catalog over HTTPS (`https://posters.jwd.me/catalog.txt`) on module load. No local database is involved
+- The catalog is a newline-delimited list of `{imdbId}.{ext}` filenames, held in memory as an IMDbID → filename map
+- Looks up posters by IMDbID and returns remote image URLs (`https://posters.jwd.me/raw/{filename}`)
+- A failed catalog load is not fatal: the next lookup retries it, and unknown IMDbIDs are simply omitted from the result
 - IPC: exposed via `api:getPosters` → `window.api.getPosters(imdbIds)`
 
 Notes on IMDbID searches:
 
 - When a suggestion is chosen, the UI formats queries like: `Some Title (2024) [tt1234567]`
 - `App.handleSearch()` will detect `tt\d{7,8}` anywhere in the query string and perform the actual P2P search using only the `tt...` token, while keeping the full string for saving/history clarity.
-- Search suggestions display poster images (48x64px) on the left side when available from `posters.db`
+- Search suggestions display poster images (48x64px) on the left side when the catalog has a poster for the IMDbID
 
 ### Download Queue
 
@@ -117,6 +119,7 @@ The main process includes a `DownloadQueue` class that manages concurrent downlo
 - Limits concurrent downloads (default: 3)
 - Queues additional downloads and processes them in order
 - Sends `download:progress` events to renderer with states: `queued`, `progressing`, `completed`, `failed`
+- Every payload carries a queue-assigned `id`. The renderer keys download rows by that id, not by filename, because the same filename (e.g. `S01E01.mkv`) recurs across magnets
 - Automatically records completed downloads to library history (when magnetTitle is provided)
 
 ### IPC Communication Pattern
@@ -134,7 +137,7 @@ All communication between renderer and main follows this pattern:
 
 - `search(query)` - Search P2P networks, enriches results with catalog metadata
 - `mediaSuggest(query, limit)` - Get autocomplete suggestions from media catalog
-- `getPosters(imdbIds)` - Get poster images by IMDb IDs
+- `getPosters(imdbIds)` - Get poster URLs by IMDb IDs. Batch call: fetch every ID for a view in one invocation rather than per component
 
 **AllDebrid**
 
@@ -148,8 +151,8 @@ All communication between renderer and main follows this pattern:
 
 **Playback**
 
-- `play(url, subtitleUrl?)` - Resolve URL and launch VLC (optionally with subtitle)
-- `playFile(filePath)` - Play local file in VLC
+- `play(url, subtitleUrl?)` - Resolve URL and launch VLC (optionally with subtitle). Returns `{ url, error? }`, where `error` is a user-facing message if VLC could not be launched
+- `playFile(filePath)` - Play local file in VLC. Returns `{ error? }` with the same meaning
 - `openFolder(filePath)` - Open containing folder in file explorer
 
 **Downloads**

@@ -1,5 +1,6 @@
 import { app, shell, BrowserWindow, ipcMain, nativeImage, dialog } from 'electron'
 import path from 'path'
+import { randomUUID } from 'crypto'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import allDebrid from './services/allDebrid'
 import scraper from './services/scraper'
@@ -9,7 +10,7 @@ import mediaCatalog from './services/mediaCatalog'
 import posters from './services/posters'
 
 const downloadTargets = new Map()
-const downloadMetadata = new Map() // url -> { magnetTitle }
+const downloadMetadata = new Map() // url -> { id, magnetTitle }
 
 function getLiveWebContents(webContents) {
   if (!webContents || webContents.isDestroyed()) {
@@ -64,8 +65,11 @@ function readDownloadItem(item, readValue, fallback) {
   }
 }
 
-function getDownloadProgressData(item, magnetTitle, state) {
+function getDownloadProgressData(item, id, magnetTitle, state) {
   return {
+    // Filenames collide across magnets (two shows both have S01E01.mkv), so the queue's
+    // own id is what the renderer keys rows by.
+    id,
     filename: safeDecodeFilename(
       readDownloadItem(item, (downloadItem) => downloadItem.getFilename(), 'unknown')
     ),
@@ -96,6 +100,19 @@ async function resolveDirectUrl(url) {
   return url
 }
 
+// VLC runs detached, so a failed launch (typically VLC not installed) can only reach the
+// user as part of the reply. Returns `{}` on success, `{ error }` otherwise.
+async function launchVlc(target, subtitleUrl = null) {
+  try {
+    await vlc.play(target, subtitleUrl, {
+      enableEnglishSubtitles: library.getSubtitlesEnabledByDefault()
+    })
+    return {}
+  } catch (error) {
+    return { error: error.message }
+  }
+}
+
 // Download queue manager
 class DownloadQueue {
   constructor(maxConcurrent = 3) {
@@ -120,10 +137,12 @@ class DownloadQueue {
   add(url, options, sender) {
     const filename = safeDecodeFilename(url.split('/').pop().split('?')[0] || 'unknown')
     const magnetTitle = options.magnetTitle || null
-    this.queue.push({ url, options, sender, filename, magnetTitle })
+    const id = randomUUID()
+    this.queue.push({ id, url, options, sender, filename, magnetTitle })
 
     this.sendProgress(
       {
+        id,
         filename,
         magnetTitle,
         state: 'queued',
@@ -137,19 +156,18 @@ class DownloadQueue {
 
   processQueue() {
     while (this.activeDownloads.size < this.maxConcurrent && this.queue.length > 0) {
-      const { url, options, sender, magnetTitle } = this.queue.shift()
-      this.startDownload(url, options, sender, magnetTitle)
+      const { id, url, options, sender, magnetTitle } = this.queue.shift()
+      this.startDownload(id, url, options, sender, magnetTitle)
     }
   }
 
-  startDownload(url, options, sender, magnetTitle) {
+  startDownload(id, url, options, sender, magnetTitle) {
     this.activeDownloads.add(url)
     if (options.directory) {
       downloadTargets.set(url, options.directory)
     }
-    if (magnetTitle) {
-      downloadMetadata.set(url, { magnetTitle })
-    }
+    // Recorded even without a magnet title so `will-download` can recover the queue id.
+    downloadMetadata.set(url, { id, magnetTitle })
 
     const webContents = this.getLiveWebContents(sender)
 
@@ -236,6 +254,8 @@ function createWindow() {
 
     const metadata = downloadMetadata.get(url) || {}
     const magnetTitle = metadata.magnetTitle || null
+    // Downloads started outside the queue have no id of their own; the URL is unique enough.
+    const downloadId = metadata.id || url
 
     if (downloadTargets.has(url)) {
       const directory = downloadTargets.get(url)
@@ -264,7 +284,9 @@ function createWindow() {
         if (isPaused) {
           console.log('Download is paused')
         } else {
-          downloadQueue.sendProgress(getDownloadProgressData(item, magnetTitle, 'progressing'))
+          downloadQueue.sendProgress(
+            getDownloadProgressData(item, downloadId, magnetTitle, 'progressing')
+          )
         }
       }
     })
@@ -273,6 +295,7 @@ function createWindow() {
       const itemUrl = readDownloadItem(item, (downloadItem) => downloadItem.getURL(), url)
       const downloadData = getDownloadProgressData(
         item,
+        downloadId,
         magnetTitle,
         state === 'completed' ? 'completed' : 'failed'
       )
@@ -396,10 +419,7 @@ app.whenReady().then(() => {
       subtitleUrl ? resolveDirectUrl(subtitleUrl) : null
     ])
 
-    vlc.play(playableUrl, playableSubtitleUrl, {
-      enableEnglishSubtitles: library.getSubtitlesEnabledByDefault()
-    })
-    return playableUrl
+    return { url: playableUrl, ...(await launchVlc(playableUrl, playableSubtitleUrl)) }
   })
 
   // Open containing folder in file explorer
@@ -408,10 +428,8 @@ app.whenReady().then(() => {
   })
 
   // Play local file in VLC
-  ipcMain.handle('api:playFile', (_, filePath) => {
-    vlc.play(filePath, null, {
-      enableEnglishSubtitles: library.getSubtitlesEnabledByDefault()
-    })
+  ipcMain.handle('api:playFile', async (_, filePath) => {
+    return await launchVlc(filePath)
   })
 
   ipcMain.handle('api:download', (event, url, options = {}) => {

@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react'
 import { usePosterPreview } from '../hooks/usePosterPreview'
 
 function parseEpisodeInfo(title) {
@@ -25,8 +24,16 @@ function parseEpisodeInfo(title) {
   return null
 }
 
-const ResultCard = ({ result, canonicalTitle, imdbId, onSelect, onSave, isSaved }) => {
-  const [posters, setPosters] = useState({})
+// `posters` is the shared imdbId -> URL map fetched once per result set by App.
+const ResultCard = ({
+  result,
+  canonicalTitle,
+  imdbId,
+  posters = {},
+  onSelect,
+  onSave,
+  isSaved
+}) => {
   const { thumbnailProps, preview } = usePosterPreview(posters)
 
   const episodeInfo = canonicalTitle ? parseEpisodeInfo(result.title) : null
@@ -36,12 +43,6 @@ const ResultCard = ({ result, canonicalTitle, imdbId, onSelect, onSave, isSaved 
       : canonicalTitle
     : result.title
   const subtitle = canonicalTitle ? result.title : null
-
-  useEffect(() => {
-    if (imdbId) {
-      window.api.getPosters([imdbId]).then(setPosters)
-    }
-  }, [imdbId])
 
   return (
     <div className="bg-surface p-4 rounded-xl border border-gray-700 hover:border-primary hover:bg-gray-700/50 transition-all hover:shadow-xl group overflow-hidden">

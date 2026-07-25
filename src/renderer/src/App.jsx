@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import SearchBar from './components/SearchBar'
 import ResultCard from './components/ResultCard'
 import FileUserInterface from './components/FileUserInterface'
@@ -48,10 +48,38 @@ function App() {
   const [showNsfw, setShowNsfw] = useState(false)
   const [currentImdbId, setCurrentImdbId] = useState(null)
   const [backgroundPoster, setBackgroundPoster] = useState(null)
+  const [resultPosters, setResultPosters] = useState({})
 
   // Compute filtered results and hidden count based on showNsfw toggle
   const results = showNsfw ? rawResults : rawResults.filter((item) => !isNsfw(item))
   const nsfwHiddenCount = rawResults.length - results.length
+
+  // An IMDb ID in the query pins every result to that one title; otherwise each result
+  // carries its own (frequently absent) ID.
+  const queryImdbId = useMemo(
+    () => (currentQuery || '').match(/tt\d{7,8}/i)?.[0] || null,
+    [currentQuery]
+  )
+  const imdbIdForResult = useCallback((result) => queryImdbId || result.imdb || null, [queryImdbId])
+
+  // One batched lookup per result set. Cards used to fetch their own poster, so a query
+  // with an IMDb ID cost one round-trip per result for a single shared image.
+  useEffect(() => {
+    const imdbIds = [...new Set(rawResults.map(imdbIdForResult).filter(Boolean))]
+    if (imdbIds.length === 0) {
+      setResultPosters({})
+      return
+    }
+
+    let cancelled = false
+    window.api.getPosters(imdbIds).then((postersMap) => {
+      if (!cancelled) setResultPosters(postersMap || {})
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [rawResults, imdbIdForResult])
 
   const viewRef = useRef(view)
   useEffect(() => {
@@ -73,7 +101,8 @@ function App() {
 
     const removeListener = window.api.onDownloadProgress((data) => {
       setActiveDownloads((prev) => {
-        const index = prev.findIndex((d) => d.filename === data.filename)
+        // Keyed by the queue's id: filenames repeat across magnets.
+        const index = prev.findIndex((d) => d.id === data.id)
         if (index === -1) {
           // New download: re-show overlay unless the Downloads tab is active.
           if (viewRef.current !== 'downloads') {
@@ -454,7 +483,13 @@ function App() {
 
   const handlePlay = async (url, filename, subtitleUrl = null, magnetContext = null) => {
     // main process will attempt to resolve AllDebrid links to a direct playable URL
-    const playableUrl = await window.api.play(url, subtitleUrl)
+    const { url: playableUrl, error } = await window.api.play(url, subtitleUrl)
+
+    // VLC failed to launch (usually not installed). Nothing played, so nothing to record.
+    if (error) {
+      showToast(error, 'error')
+      return
+    }
 
     // Record play in history if we have magnet context. Callers that select the magnet
     // in the same tick must pass it explicitly — `currentMagnet` is still stale here.
@@ -678,6 +713,7 @@ function App() {
             downloadHistory={downloadHistory}
             onRemoveFromHistory={handleRemoveFromDownloadHistory}
             onClearHistory={handleClearDownloadHistory}
+            onPlayError={(message) => showToast(message, 'error')}
           />
         ) : (
           <>
@@ -750,21 +786,18 @@ function App() {
                     </button>
                   </div>
                 )}
-                {results.map((result, index) => {
-                  const imdbMatch = (currentQuery || '').match(/tt\d{7,8}/i)
-                  const imdbId = imdbMatch ? imdbMatch[0] : result.imdb || null
-                  return (
-                    <ResultCard
-                      key={index}
-                      result={result}
-                      canonicalTitle={currentMediaCatalogTitle || result.catalogTitle}
-                      imdbId={imdbId}
-                      onSelect={handleSelectResult}
-                      onSave={handleSaveMagnet}
-                      isSaved={savedMagnets.some((m) => m.magnet === result.magnet)}
-                    />
-                  )
-                })}
+                {results.map((result, index) => (
+                  <ResultCard
+                    key={index}
+                    result={result}
+                    canonicalTitle={currentMediaCatalogTitle || result.catalogTitle}
+                    imdbId={imdbIdForResult(result)}
+                    posters={resultPosters}
+                    onSelect={handleSelectResult}
+                    onSave={handleSaveMagnet}
+                    isSaved={savedMagnets.some((m) => m.magnet === result.magnet)}
+                  />
+                ))}
               </div>
             )}
           </>
@@ -786,6 +819,7 @@ function App() {
           downloadHistory={downloadHistory}
           hidden={view === 'downloads' || isDownloadModalDismissed}
           onDismiss={() => setIsDownloadModalDismissed(true)}
+          onPlayError={(message) => showToast(message, 'error')}
         />
       </div>
     </div>

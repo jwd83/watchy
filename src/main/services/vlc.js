@@ -27,6 +27,8 @@ class VLCService {
     return value
   }
 
+  // A missing VLC only shows up as an async spawn error, so `play` resolves once the
+  // process is actually running and rejects otherwise. Callers surface the failure.
   play(input, subtitleUrl = null, options = {}) {
     const url = this.sanitizeInput(input)
     let command = 'vlc'
@@ -53,17 +55,33 @@ class VLCService {
       if (found) command = found
     }
 
-    const vlcProcess = spawn(command, args, {
-      detached: true,
-      stdio: 'ignore'
-    })
+    return new Promise((resolve, reject) => {
+      const vlcProcess = spawn(command, args, {
+        detached: true,
+        stdio: 'ignore'
+      })
 
-    vlcProcess.on('error', (err) => {
-      console.error('Failed to start VLC:', err)
-    })
+      vlcProcess.once('error', (err) => {
+        console.error('Failed to start VLC:', err)
+        reject(new Error(this.launchErrorMessage(err, command)))
+      })
 
-    // Let Electron continue even if VLC is still running.
-    vlcProcess.unref()
+      vlcProcess.once('spawn', () => {
+        // Let Electron continue even if VLC is still running.
+        vlcProcess.unref()
+        resolve()
+      })
+    })
+  }
+
+  launchErrorMessage(err, command) {
+    if (err?.code === 'ENOENT') {
+      return command === 'vlc'
+        ? 'VLC not found. Install VLC Media Player to play this.'
+        : `VLC not found at ${command}. Install VLC Media Player to play this.`
+    }
+
+    return `Unable to start VLC: ${err?.message || 'unknown error'}`
   }
 }
 
