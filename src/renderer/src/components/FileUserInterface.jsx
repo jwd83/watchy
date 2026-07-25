@@ -1,4 +1,4 @@
-import { basename, basenameWithoutExt, isVideoFile } from '../utils'
+import { basename, basenameWithoutExt, isVideoFile, watchedMatcher } from '../utils'
 
 const FileUserInterface = ({ files, onPlay, watchedFiles = [], onSave, magnetData, isSaved }) => {
   const resolveLink = async (url) => {
@@ -50,7 +50,7 @@ const FileUserInterface = ({ files, onPlay, watchedFiles = [], onSave, magnetDat
   // Filter for video files and sort naturally
   const videoFiles = files.filter((f) => isVideoFile(f.filename)).sort(naturalSort)
 
-  const isWatched = (filename) => watchedFiles.includes(filename)
+  const isWatched = watchedMatcher(watchedFiles)
 
   return (
     <div className="mt-8 bg-surface rounded-xl p-6 border border-gray-700">

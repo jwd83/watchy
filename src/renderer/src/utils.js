@@ -13,6 +13,16 @@ export const basenameWithoutExt = (p) => {
   return lastDot > 0 ? base.substring(0, lastDot) : base
 }
 
+/**
+ * History entries hold either the full path or just the basename, depending on which
+ * AllDebrid path recorded them. Returns a predicate that matches either form so a file
+ * recorded one way is still recognised when listed the other way.
+ */
+export const watchedMatcher = (watchedFilenames = []) => {
+  const seen = new Set(watchedFilenames.flatMap((f) => [f, basename(f)]))
+  return (filename) => seen.has(filename) || seen.has(basename(filename))
+}
+
 /** Extensions we treat as playable video. */
 export const VIDEO_EXTENSIONS = ['mp4', 'mkv', 'avi', 'mov', 'wmv']
 

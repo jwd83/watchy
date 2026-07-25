@@ -1,4 +1,5 @@
 import Store from 'electron-store'
+import { randomUUID } from 'crypto'
 
 const store = new Store()
 
@@ -47,7 +48,9 @@ class LibraryService {
       return { success: false, message: 'Search already saved' }
     }
     searches.unshift({
-      id: Date.now().toString(),
+      // Not Date.now(): entries created in the same millisecond would share an id, and every
+      // remove path filters by id, so deleting one would delete its twin.
+      id: randomUUID(),
       query: searchQuery,
       savedAt: new Date().toISOString()
     })
@@ -77,7 +80,7 @@ class LibraryService {
     const now = new Date().toISOString()
 
     magnets.unshift({
-      id: Date.now().toString(),
+      id: randomUUID(),
       // Magnet/display name as originally returned from search/API.
       title: magnetData.title,
       magnet: magnetData.magnet,
@@ -118,9 +121,11 @@ class LibraryService {
       const fileEntry = historyEntry.files.find((f) => f.filename === filename)
 
       if (fileEntry) {
-        // Update existing file entry
-        fileEntry.playCount += 1
+        // Update existing file entry. The caller just resolved a fresh stream URL, so keep it:
+        // AllDebrid links expire, and History replays whatever is stored here.
+        fileEntry.playCount = (fileEntry.playCount || 0) + 1
         fileEntry.playedAt = now
+        if (streamUrl) fileEntry.streamUrl = streamUrl
       } else {
         // Add new file entry
         historyEntry.files.push({
@@ -135,7 +140,7 @@ class LibraryService {
     } else {
       // Create new history entry
       historyEntry = {
-        id: Date.now().toString(),
+        id: randomUUID(),
         magnetHash,
         magnetTitle,
         files: [
@@ -206,7 +211,9 @@ class LibraryService {
   addToDownloadHistory(downloadData) {
     const history = this.getDownloadHistory()
     const historyEntry = {
-      id: Date.now().toString(),
+      // Concurrent downloads finish in the same millisecond often enough (a batch of dead
+      // links fails all at once), and a shared id makes "remove" delete every twin.
+      id: randomUUID(),
       filename: downloadData.filename,
       magnetTitle: downloadData.magnetTitle || null,
       state: downloadData.state,

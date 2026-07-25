@@ -134,7 +134,19 @@ class DownloadQueue {
     return sendDownloadProgress(this.getLiveWebContents(sender), payload)
   }
 
+  isPending(url) {
+    return this.activeDownloads.has(url) || this.queue.some((entry) => entry.url === url)
+  }
+
   add(url, options, sender) {
+    // `downloadMetadata` and `activeDownloads` are both keyed by URL, so a second copy of
+    // an in-flight URL would steal the first one's id and strand its row at `queued`.
+    // The duplicate would overwrite the same file anyway, so drop it and keep the live row.
+    if (this.isPending(url)) {
+      console.warn(`Download already queued or in progress, ignoring duplicate: ${url}`)
+      return
+    }
+
     const filename = safeDecodeFilename(url.split('/').pop().split('?')[0] || 'unknown')
     const magnetTitle = options.magnetTitle || null
     const id = randomUUID()
@@ -156,12 +168,12 @@ class DownloadQueue {
 
   processQueue() {
     while (this.activeDownloads.size < this.maxConcurrent && this.queue.length > 0) {
-      const { id, url, options, sender, magnetTitle } = this.queue.shift()
-      this.startDownload(id, url, options, sender, magnetTitle)
+      this.startDownload(this.queue.shift())
     }
   }
 
-  startDownload(id, url, options, sender, magnetTitle) {
+  startDownload(entry) {
+    const { id, url, options, sender, magnetTitle } = entry
     this.activeDownloads.add(url)
     if (options.directory) {
       downloadTargets.set(url, options.directory)
@@ -173,7 +185,7 @@ class DownloadQueue {
 
     if (!webContents) {
       console.warn(`Unable to start download because the renderer was destroyed: ${url}`)
-      this.onDownloadComplete(url)
+      this.failDownload(entry)
       return
     }
 
@@ -181,8 +193,26 @@ class DownloadQueue {
       webContents.downloadURL(url)
     } catch (error) {
       console.warn('Unable to start download:', error)
-      this.onDownloadComplete(url)
+      this.failDownload(entry)
     }
+  }
+
+  // A download that never reaches `will-download` gets no terminal event of its own, so its
+  // row would sit at `queued` forever. Report the failure before releasing the slot.
+  failDownload({ id, url, sender, filename, magnetTitle }) {
+    this.sendProgress(
+      {
+        id,
+        filename,
+        magnetTitle,
+        state: 'failed',
+        receivedBytes: 0,
+        totalBytes: 0,
+        savePath: null
+      },
+      sender
+    )
+    this.onDownloadComplete(url)
   }
 
   onDownloadComplete(url) {

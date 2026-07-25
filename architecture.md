@@ -76,9 +76,10 @@ Responsibilities:
   - `mainWindow` reference for sending progress events.
 - Public methods:
   - `setMainWindow(window)` – attach window for IPC updates.
-  - `add(url, options, sender)` – assign an `id` and enqueue the download. Also emits an initial `download:progress` event carrying that `id`, state `queued`, and queue position.
+  - `add(url, options, sender)` – assign an `id` and enqueue the download. Also emits an initial `download:progress` event carrying that `id`, state `queued`, and queue position. A URL that is already queued or active is ignored: `downloadTargets`, `downloadMetadata`, and `activeDownloads` are all keyed by URL, so a second copy would take over the first one's bookkeeping.
   - `processQueue()` – start new downloads until `maxConcurrent` is reached.
-  - `startDownload(id, url, options, sender, magnetTitle)` – records `downloadTargets` (when `options.directory` is set) and `downloadMetadata` (`url -> { id, magnetTitle }`), then calls `sender.downloadURL(url)` to trigger Electron's download mechanism.
+  - `failDownload(entry)` – emit a `failed` event for the entry and release its slot. Used when a download never reaches `will-download` (destroyed renderer, or `downloadURL` throwing), which would otherwise leave the row stuck at `queued`.
+  - `startDownload(entry)` – records `downloadTargets` (when `options.directory` is set) and `downloadMetadata` (`url -> { id, magnetTitle }`), then calls `sender.downloadURL(url)` to trigger Electron's download mechanism. Falls back to `failDownload(entry)` if there is no live renderer or the call throws.
   - `onDownloadComplete(url)` – remove from `activeDownloads` and reprocess queue.
 
 `BrowserWindow.webContents.session.on('will-download')` is used to:
@@ -195,7 +196,10 @@ All methods require `apiKey` to be set and throw if missing.
 
 Encapsulates user-level persistence using `electron-store`.
 
-Keys and structures:
+Keys and structures. Every `id` below is generated with `randomUUID()`. They were previously
+`Date.now().toString()`, which collides for entries created in the same millisecond – and since every
+removal filters by id, colliding entries were deleted together. Entries persisted before the change
+keep their old timestamp ids.
 
 - **Saved searches** (`savedSearches`):
   - Array of objects: `{ id: string, query: string, savedAt: ISOString }`.
@@ -203,7 +207,7 @@ Keys and structures:
   - Object map `{ [hash: string]: id: number | string }` for caching AllDebrid magnet IDs by torrent hash.
 - **Saved magnets (library)** (`savedMagnets`):
   - Array:
-    - `id: string` (timestamp-based).
+    - `id: string`.
     - `title: string` – display title.
     - `magnet: string` – magnet URI.
     - `size: string` – human readable size.
@@ -238,6 +242,9 @@ Exposed methods (wired via IPC):
 - Saved magnets: `getSavedMagnets`, `addSavedMagnet`, `removeSavedMagnet`.
 - Magnet IDs: `getMagnetIdByHash`, `setMagnetId`.
 - Watch history: `getHistory`, `recordPlay`, `removeHistoryEntry`, `removeAllHistory`, `resetFileWatched`.
+  - `recordPlay` bumps `playCount`/`playedAt` for a file already in the entry and overwrites its
+    stored `streamUrl` with the freshly resolved one, since AllDebrid links expire and the History
+    view replays whatever is stored.
 - Download history: `getDownloadHistory`, `addToDownloadHistory`, `removeFromDownloadHistory`, `clearDownloadHistory`.
 
 ### MediaCatalogService (`mediaCatalog.js`)

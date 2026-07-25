@@ -58,8 +58,16 @@ const SearchBar = ({ onSearch, onSaveSearch, isLoading, currentQuery }) => {
         if (imdbIds.length > 0) {
           const postersMap = await window.api.getPosters(imdbIds)
           if (requestIdRef.current === id) {
-            setPosters(postersMap)
+            setPosters(postersMap || {})
           }
+        }
+      } catch (error) {
+        // A failed lookup (catalog unavailable, poster host down) must not become an
+        // unhandled rejection; just show no suggestions for this keystroke.
+        console.error('Suggestion lookup failed:', error)
+        if (requestIdRef.current === id) {
+          setSuggestions([])
+          setActiveIndex(-1)
         }
       } finally {
         if (requestIdRef.current === id) setIsSuggesting(false)

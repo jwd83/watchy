@@ -8,7 +8,7 @@ import History from './components/History'
 import Toast from './components/Toast'
 import DownloadManager from './components/DownloadManager'
 import StatusModal from './components/StatusModal'
-import { basename } from './utils'
+import { watchedMatcher } from './utils'
 import logo from './assets/logo.png'
 
 /**
@@ -155,6 +155,13 @@ function App() {
 
   const clearStatusModal = useCallback(() => {
     setStatusModal(null)
+  }, [])
+
+  // Stable identity, like clearStatusModal: Toast restarts its auto-dismiss timer whenever
+  // `onClose` changes, and download progress re-renders App often enough that an inline
+  // arrow would keep the toast on screen indefinitely.
+  const clearToast = useCallback(() => {
+    setToast(null)
   }, [])
 
   const handleSearch = async (query) => {
@@ -380,12 +387,9 @@ function App() {
       }
       setCurrentMagnet(magnetContext)
 
-      // Find first unwatched file. History entries may hold either the full path or
-      // just the basename depending on which AllDebrid path recorded them, so match both.
-      const watchedSet = new Set(entry.files.flatMap((f) => [f.filename, basename(f.filename)]))
-      const nextFile = allFiles.find(
-        (f) => !watchedSet.has(f.filename) && !watchedSet.has(basename(f.filename))
-      )
+      // Find first unwatched file.
+      const isWatched = watchedMatcher(entry.files.map((f) => f.filename))
+      const nextFile = allFiles.find((f) => !isWatched(f.filename))
 
       if (nextFile) {
         setStatusModal({ message: 'Starting playback...', type: 'loading' })
@@ -809,9 +813,7 @@ function App() {
           onSave={handleSaveSettings}
         />
 
-        {toast && (
-          <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
-        )}
+        {toast && <Toast message={toast.message} type={toast.type} onClose={clearToast} />}
 
         <StatusModal status={statusModal} onClose={clearStatusModal} />
         <DownloadManager
