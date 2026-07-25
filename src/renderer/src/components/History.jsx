@@ -105,7 +105,7 @@ const History = ({
                       </div>
                       <div className="flex gap-2 ml-4">
                         <button
-                          onClick={() => onPlayFile(file.streamUrl)}
+                          onClick={() => onPlayFile(entry, file)}
                           className="px-3 py-1.5 bg-accent hover:bg-violet-600 text-white rounded-lg text-sm font-medium transition-colors"
                           title="Play again"
                         >
@@ -134,7 +134,8 @@ const History = ({
                   ))}
                 {entry.files.length > 3 && (
                   <p className="text-xs text-gray-500 pl-3">
-                    + {entry.files.length - 3} more file{entry.files.length - 3 === 1 ? '' : 's'} not shown
+                    + {entry.files.length - 3} more file{entry.files.length - 3 === 1 ? '' : 's'}{' '}
+                    not shown
                   </p>
                 )}
               </div>
