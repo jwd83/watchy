@@ -1,8 +1,4 @@
-const basename = (p) => {
-  if (!p) return ''
-  const s = String(p)
-  return s.split('/').pop().split('\\').pop()
-}
+import { basename } from '../utils'
 
 const History = ({
   history,

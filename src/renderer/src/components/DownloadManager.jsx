@@ -1,4 +1,62 @@
 import { useEffect, useMemo, useState } from 'react'
+import { downloadRatio } from '../utils'
+
+const stateLabel = (download) => {
+  if (download.state === 'completed') return 'Done'
+  if (download.state === 'failed') return 'Failed'
+  if (download.state === 'queued') return 'Queued'
+  // totalBytes is 0 until the server reports a size, so show a placeholder rather than NaN%.
+  if (!download.totalBytes) return '…'
+  return `${Math.round(downloadRatio(download) * 100)}%`
+}
+
+/** One in-progress/finished download row. Shared by the overlay and the Downloads page. */
+const DownloadItem = ({ download, className }) => (
+  <div className={className}>
+    <div className="flex justify-between items-center mb-1">
+      <span className="text-sm text-gray-200 truncate pr-2" title={download.filename}>
+        {download.filename}
+      </span>
+      <span className="text-xs text-gray-400 whitespace-nowrap">{stateLabel(download)}</span>
+    </div>
+
+    {download.state === 'progressing' && (
+      <div className="w-full bg-gray-700 rounded-full h-1.5 mt-1">
+        <div
+          className="bg-accent h-1.5 rounded-full transition-all duration-300"
+          style={{ width: `${downloadRatio(download) * 100}%` }}
+        />
+      </div>
+    )}
+    {download.state === 'queued' && (
+      <div className="text-xs text-yellow-500 mt-1">Waiting for slot (max 3 concurrent)</div>
+    )}
+    {download.state === 'completed' && (
+      <div className="text-xs text-green-500 mt-1">Download complete</div>
+    )}
+    {download.state === 'completed' && download.savePath && (
+      <div className="flex items-center gap-2 mt-2">
+        <button
+          type="button"
+          onClick={() => window.api.openFolder(download.savePath)}
+          className="text-xs px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded transition-colors"
+        >
+          📁 Open Folder
+        </button>
+        <button
+          type="button"
+          onClick={() => window.api.playFile(download.savePath)}
+          className="text-xs px-2 py-1 bg-accent hover:bg-accent/80 rounded transition-colors"
+        >
+          ▶️ Play in VLC
+        </button>
+      </div>
+    )}
+    {download.state === 'failed' && (
+      <div className="text-xs text-red-500 mt-1">Download failed</div>
+    )}
+  </div>
+)
 
 const DownloadManager = ({
   downloads,
@@ -95,65 +153,11 @@ const DownloadManager = ({
           ) : (
             <div className="space-y-2">
               {downloads.map((download) => (
-                <div
+                <DownloadItem
                   key={download.filename}
+                  download={download}
                   className="p-3 bg-background rounded-lg border border-gray-700/60"
-                >
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-sm text-gray-200 truncate pr-2" title={download.filename}>
-                      {download.filename}
-                    </span>
-                    <span className="text-xs text-gray-400 whitespace-nowrap">
-                      {download.state === 'completed'
-                        ? 'Done'
-                        : download.state === 'failed'
-                          ? 'Failed'
-                          : download.state === 'queued'
-                            ? 'Queued'
-                            : `${Math.round((download.receivedBytes / download.totalBytes) * 100)}%`}
-                    </span>
-                  </div>
-
-                  {download.state === 'progressing' && (
-                    <div className="w-full bg-gray-700 rounded-full h-1.5 mt-1">
-                      <div
-                        className="bg-accent h-1.5 rounded-full transition-all duration-300"
-                        style={{
-                          width: `${(download.receivedBytes / download.totalBytes) * 100}%`
-                        }}
-                      />
-                    </div>
-                  )}
-                  {download.state === 'queued' && (
-                    <div className="text-xs text-yellow-500 mt-1">
-                      Waiting for slot (max 3 concurrent)
-                    </div>
-                  )}
-                  {download.state === 'completed' && (
-                    <div className="text-xs text-green-500 mt-1">Download complete</div>
-                  )}
-                  {download.state === 'completed' && download.savePath && (
-                    <div className="flex items-center gap-2 mt-2">
-                      <button
-                        type="button"
-                        onClick={() => window.api.openFolder(download.savePath)}
-                        className="text-xs px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded transition-colors"
-                      >
-                        📁 Open Folder
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => window.api.playFile(download.savePath)}
-                        className="text-xs px-2 py-1 bg-accent hover:bg-accent/80 rounded transition-colors"
-                      >
-                        ▶️ Play in VLC
-                      </button>
-                    </div>
-                  )}
-                  {download.state === 'failed' && (
-                    <div className="text-xs text-red-500 mt-1">Download failed</div>
-                  )}
-                </div>
+                />
               ))}
             </div>
           )}
@@ -318,7 +322,11 @@ const DownloadManager = ({
   return (
     <div
       className={`fixed bottom-4 right-4 w-80 bg-surface border border-gray-700 rounded-lg shadow-xl overflow-hidden z-50 transition-all duration-300 ease-in-out transform ${
-        isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+        isVisible
+          ? 'opacity-100 translate-y-0'
+          : // The panel stays mounted after the auto-hide fade, so it must stop
+            // swallowing clicks in the bottom-right corner while invisible.
+            'opacity-0 translate-y-4 pointer-events-none'
       }`}
     >
       <div className="bg-gray-800 px-4 py-2 border-b border-gray-700 flex justify-between items-center">
@@ -351,62 +359,11 @@ const DownloadManager = ({
       </div>
       <div className="max-h-64 overflow-y-auto">
         {downloads.map((download) => (
-          <div
+          <DownloadItem
             key={download.filename}
+            download={download}
             className="p-3 border-b border-gray-700 last:border-0 hover:bg-gray-800 transition-colors"
-          >
-            <div className="flex justify-between items-center mb-1">
-              <span className="text-sm text-gray-200 truncate pr-2" title={download.filename}>
-                {download.filename}
-              </span>
-              <span className="text-xs text-gray-400 whitespace-nowrap">
-                {download.state === 'completed'
-                  ? 'Done'
-                  : download.state === 'failed'
-                    ? 'Failed'
-                    : download.state === 'queued'
-                      ? 'Queued'
-                      : `${Math.round((download.receivedBytes / download.totalBytes) * 100)}%`}
-              </span>
-            </div>
-            {download.state === 'progressing' && (
-              <div className="w-full bg-gray-700 rounded-full h-1.5 mt-1">
-                <div
-                  className="bg-accent h-1.5 rounded-full transition-all duration-300"
-                  style={{ width: `${(download.receivedBytes / download.totalBytes) * 100}%` }}
-                />
-              </div>
-            )}
-            {download.state === 'queued' && (
-              <div className="text-xs text-yellow-500 mt-1">
-                Waiting for slot (max 3 concurrent)
-              </div>
-            )}
-            {download.state === 'completed' && (
-              <div className="text-xs text-green-500 mt-1">Download complete</div>
-            )}
-            {download.state === 'completed' && download.savePath && (
-              <div className="flex items-center gap-2 mt-2">
-                <button
-                  type="button"
-                  onClick={() => window.api.openFolder(download.savePath)}
-                  className="text-xs px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded transition-colors"
-                >
-                  📁 Open Folder
-                </button>
-                <button
-                  type="button"
-                  onClick={() => window.api.playFile(download.savePath)}
-                  className="text-xs px-2 py-1 bg-accent hover:bg-accent/80 rounded transition-colors"
-                >
-                  ▶️ Play in VLC
-                </button>
-              </div>
-            )}
-            {download.state === 'failed' && (
-              <div className="text-xs text-red-500 mt-1">Download failed</div>
-            )}
-          </div>
+          />
         ))}
       </div>
     </div>

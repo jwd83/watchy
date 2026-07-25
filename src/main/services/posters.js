@@ -74,21 +74,23 @@ class PostersService {
   async getPostersByImdbIds(ids) {
     if (!Array.isArray(ids) || ids.length === 0) return {}
 
-    console.log('[Posters] getPostersByImdbIds called with', ids.length, 'IDs:', ids)
-
-    // Wait for catalog to load
+    // Wait for the catalog. A failed load is retried here rather than being fatal
+    // for the rest of the session.
     try {
-      await catalogLoadPromise
+      await loadCatalog()
+      if (!isCatalogLoaded) {
+        catalogLoadPromise = null
+        await loadCatalog()
+      }
     } catch (err) {
       console.error('[Posters] Failed to load catalog:', err)
-      return new Map()
+      return {}
     }
 
-    console.log('[Posters] Catalog loaded:', isCatalogLoaded, 'Size:', catalog.size)
-
+    // Callers index the result by IMDb ID, so every path must return a plain object.
     if (!isCatalogLoaded || catalog.size === 0) {
-      console.warn('[Posters] Catalog not loaded or empty, returning empty map')
-      return new Map()
+      console.warn('[Posters] Catalog not loaded or empty, returning no posters')
+      return {}
     }
 
     const result = {}
@@ -96,15 +98,10 @@ class PostersService {
     for (const id of ids) {
       const filename = catalog.get(id)
       if (filename) {
-        const url = `${BASE_IMAGE_URL}${filename}`
-        result[id] = url
-        console.log('[Posters] Found poster for', id, '->', url)
-      } else {
-        console.log('[Posters] No poster found for', id)
+        result[id] = `${BASE_IMAGE_URL}${filename}`
       }
     }
 
-    console.log('[Posters] Returning', Object.keys(result).length, 'poster URLs')
     return result
   }
 

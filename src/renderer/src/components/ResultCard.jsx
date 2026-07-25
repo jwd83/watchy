@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { usePosterPreview } from '../hooks/usePosterPreview'
 
 function parseEpisodeInfo(title) {
   if (!title) return null
@@ -26,8 +27,7 @@ function parseEpisodeInfo(title) {
 
 const ResultCard = ({ result, canonicalTitle, imdbId, onSelect, onSave, isSaved }) => {
   const [posters, setPosters] = useState({})
-  const [hoveredPoster, setHoveredPoster] = useState(null)
-  const [posterPreviewPos, setPosterPreviewPos] = useState({ top: 0, left: 0 })
+  const { thumbnailProps, preview } = usePosterPreview(posters)
 
   const episodeInfo = canonicalTitle ? parseEpisodeInfo(result.title) : null
   const primaryTitle = canonicalTitle
@@ -43,19 +43,6 @@ const ResultCard = ({ result, canonicalTitle, imdbId, onSelect, onSave, isSaved 
     }
   }, [imdbId])
 
-  const handlePosterMouseEnter = (e) => {
-    const rect = e.currentTarget.getBoundingClientRect()
-    setPosterPreviewPos({
-      top: rect.top,
-      left: rect.right + 12
-    })
-    setHoveredPoster(imdbId)
-  }
-
-  const handlePosterMouseLeave = () => {
-    setHoveredPoster(null)
-  }
-
   return (
     <div className="bg-surface p-4 rounded-xl border border-gray-700 hover:border-primary hover:bg-gray-700/50 transition-all hover:shadow-xl group overflow-hidden">
       <div className="flex items-start gap-4">
@@ -64,8 +51,7 @@ const ResultCard = ({ result, canonicalTitle, imdbId, onSelect, onSave, isSaved 
             src={posters[imdbId]}
             alt={primaryTitle}
             className="w-12 h-16 object-cover rounded flex-shrink-0 cursor-zoom-in"
-            onMouseEnter={handlePosterMouseEnter}
-            onMouseLeave={handlePosterMouseLeave}
+            {...thumbnailProps(imdbId)}
           />
         )}
         <button onClick={() => onSelect(result)} className="flex-1 min-w-0 text-left">
@@ -109,21 +95,7 @@ const ResultCard = ({ result, canonicalTitle, imdbId, onSelect, onSave, isSaved 
         </button>
       </div>
 
-      {hoveredPoster && posters[hoveredPoster] && (
-        <div
-          className="fixed z-[100] pointer-events-none"
-          style={{
-            top: posterPreviewPos.top,
-            left: posterPreviewPos.left
-          }}
-        >
-          <img
-            src={posters[hoveredPoster]}
-            alt="Poster preview"
-            className="w-48 h-72 object-cover rounded-lg shadow-2xl border border-gray-600"
-          />
-        </div>
-      )}
+      {preview}
     </div>
   )
 }

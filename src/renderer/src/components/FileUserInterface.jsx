@@ -1,17 +1,6 @@
+import { basename, basenameWithoutExt, isVideoFile } from '../utils'
+
 const FileUserInterface = ({ files, onPlay, watchedFiles = [], onSave, magnetData, isSaved }) => {
-  const basename = (p) => {
-    if (!p) return ''
-    const s = String(p)
-    // Support both folder separators since we sometimes build paths with '/'
-    return s.split('/').pop().split('\\').pop()
-  }
-
-  const basenameWithoutExt = (p) => {
-    const base = basename(p)
-    const lastDot = base.lastIndexOf('.')
-    return lastDot > 0 ? base.substring(0, lastDot) : base
-  }
-
   const resolveLink = async (url) => {
     try {
       if (window?.api?.resolve) {
@@ -59,12 +48,7 @@ const FileUserInterface = ({ files, onPlay, watchedFiles = [], onSave, magnetDat
   }
 
   // Filter for video files and sort naturally
-  const videoFiles = files
-    .filter((f) => {
-      const ext = f.filename.split('.').pop().toLowerCase()
-      return ['mp4', 'mkv', 'avi', 'mov', 'wmv'].includes(ext)
-    })
-    .sort(naturalSort)
+  const videoFiles = files.filter((f) => isVideoFile(f.filename)).sort(naturalSort)
 
   const isWatched = (filename) => watchedFiles.includes(filename)
 
@@ -128,17 +112,12 @@ const FileUserInterface = ({ files, onPlay, watchedFiles = [], onSave, magnetDat
               onClick={async () => {
                 const folder = await window.api.selectFolder()
                 if (folder) {
-                  // Trigger downloads
-                  for (const file of files) {
-                    // Check extension again just in case, though videoFiles is filtered
-                    const ext = file.filename.split('.').pop().toLowerCase()
-                    if (['mp4', 'mkv', 'avi', 'mov', 'wmv'].includes(ext)) {
-                      const url = await resolveLink(file.link)
-                      window.api.download(url, {
-                        directory: folder,
-                        magnetTitle: magnetData?.title
-                      })
-                    }
+                  for (const file of videoFiles) {
+                    const url = await resolveLink(file.link)
+                    window.api.download(url, {
+                      directory: folder,
+                      magnetTitle: magnetData?.title
+                    })
                   }
                 }
               }}

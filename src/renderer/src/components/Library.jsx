@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from 'react'
+import { usePosterPreview } from '../hooks/usePosterPreview'
 
 const Library = ({
   savedSearches,
@@ -11,29 +12,17 @@ const Library = ({
   const [filter, setFilter] = useState('')
   const [activeTab, setActiveTab] = useState('library') // 'library' | 'searches'
   const [posters, setPosters] = useState({})
-  const [hoveredPoster, setHoveredPoster] = useState(null)
-  const [posterPreviewPos, setPosterPreviewPos] = useState({ top: 0, left: 0 })
+  const { thumbnailProps, preview } = usePosterPreview(posters)
 
   const normalizedFilter = filter.trim().toLowerCase()
 
-  const handlePosterMouseEnter = (e, imdbId) => {
-    const rect = e.currentTarget.getBoundingClientRect()
-    setPosterPreviewPos({
-      top: rect.top,
-      left: rect.right + 12
-    })
-    setHoveredPoster(imdbId)
-  }
-
-  const handlePosterMouseLeave = () => {
-    setHoveredPoster(null)
-  }
-
   useEffect(() => {
     const imdbIds = savedMagnets.map((item) => item.imdbId).filter(Boolean)
-    if (imdbIds.length > 0) {
-      window.api.getPosters(imdbIds).then(setPosters)
+    if (imdbIds.length === 0) {
+      setPosters({})
+      return
     }
+    window.api.getPosters(imdbIds).then(setPosters)
   }, [savedMagnets])
 
   const sortedSavedSearches = useMemo(
@@ -126,8 +115,7 @@ const Library = ({
                           src={posters[item.imdbId]}
                           alt={primaryTitle}
                           className="w-12 h-16 object-cover rounded flex-shrink-0 cursor-zoom-in"
-                          onMouseEnter={(e) => handlePosterMouseEnter(e, item.imdbId)}
-                          onMouseLeave={handlePosterMouseLeave}
+                          {...thumbnailProps(item.imdbId)}
                         />
                       )}
                       <div className="flex-1 min-w-0">
@@ -240,21 +228,7 @@ const Library = ({
         </div>
       )}
 
-      {hoveredPoster && posters[hoveredPoster] && (
-        <div
-          className="fixed z-[100] pointer-events-none"
-          style={{
-            top: posterPreviewPos.top,
-            left: posterPreviewPos.left
-          }}
-        >
-          <img
-            src={posters[hoveredPoster]}
-            alt="Poster preview"
-            className="w-48 h-72 object-cover rounded-lg shadow-2xl border border-gray-600"
-          />
-        </div>
-      )}
+      {preview}
     </div>
   )
 }

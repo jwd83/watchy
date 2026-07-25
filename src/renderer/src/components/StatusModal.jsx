@@ -14,22 +14,21 @@ const StatusModal = ({ status, onClose }) => {
     setShouldRender(true)
     requestAnimationFrame(() => setIsVisible(true))
 
-    // Auto-dismiss for completion statuses
-    if (status.type === 'success') {
-      const timer = setTimeout(() => {
-        setIsVisible(false)
-        setTimeout(() => onClose(), 300)
-      }, 2500)
-      return () => clearTimeout(timer)
-    }
+    // Auto-dismiss completion statuses. Both timers have to be tracked: if only the
+    // outer one is cleared, a pending fade-out can still call onClose() and wipe a
+    // status that arrived in the meantime.
+    const autoDismissMs = status.type === 'success' ? 2500 : status.type === 'error' ? 6000 : null
+    if (autoDismissMs === null) return
 
-    // Auto-dismiss error messages after 6 seconds
-    if (status.type === 'error') {
-      const timer = setTimeout(() => {
-        setIsVisible(false)
-        setTimeout(() => onClose(), 300)
-      }, 6000)
-      return () => clearTimeout(timer)
+    let closeTimer
+    const dismissTimer = setTimeout(() => {
+      setIsVisible(false)
+      closeTimer = setTimeout(() => onClose(), 300)
+    }, autoDismissMs)
+
+    return () => {
+      clearTimeout(dismissTimer)
+      clearTimeout(closeTimer)
     }
   }, [status, onClose])
 

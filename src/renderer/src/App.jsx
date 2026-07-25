@@ -8,6 +8,7 @@ import History from './components/History'
 import Toast from './components/Toast'
 import DownloadManager from './components/DownloadManager'
 import StatusModal from './components/StatusModal'
+import { basename } from './utils'
 import logo from './assets/logo.png'
 
 /**
@@ -17,11 +18,6 @@ import logo from './assets/logo.png'
 function isNsfw(item) {
   const category = item.category || 0
   return category >= 500 && category < 600
-}
-
-const basename = (p) => {
-  if (!p) return ''
-  return String(p).split('/').pop().split('\\').pop()
 }
 
 /** Message shown when a magnet resolves to zero playable files. */

@@ -77,6 +77,25 @@ function getDownloadProgressData(item, magnetTitle, state) {
   }
 }
 
+// Resolve an AllDebrid hoster link to a direct URL.
+// Non-http input and unlock failures fall back to the original value.
+async function resolveDirectUrl(url) {
+  if (typeof url !== 'string' || !url.startsWith('http')) {
+    return url
+  }
+
+  try {
+    const unlock = await allDebrid.unlockLink(url)
+    if (unlock?.status === 'success' && unlock?.data?.link) {
+      return unlock.data.link
+    }
+  } catch {
+    // ignore unlock failures; fall back to the original url
+  }
+
+  return url
+}
+
 // Download queue manager
 class DownloadQueue {
   constructor(maxConcurrent = 3) {
@@ -364,56 +383,18 @@ app.whenReady().then(() => {
     return await allDebrid.unlockLink(link)
   })
 
-  // Resolve AllDebrid hoster links to a direct URL.
-  // If the link is already direct/playable, we fall back to the original.
+  // Resolve AllDebrid hoster links to a direct URL without playing.
   ipcMain.handle('api:resolve', async (_, url) => {
-    let resolvedUrl = url
-
-    try {
-      if (typeof url === 'string' && url.startsWith('http')) {
-        const unlock = await allDebrid.unlockLink(url)
-        if (unlock?.status === 'success' && unlock?.data?.link) {
-          resolvedUrl = unlock.data.link
-        }
-      }
-    } catch {
-      // ignore unlock failures; fall back to original url
-    }
-
-    return resolvedUrl
+    return await resolveDirectUrl(url)
   })
 
   // Resolve AllDebrid hoster links to a direct playable URL before launching VLC.
-  // If the link is already playable, we fall back to the original.
   // Optionally accepts a subtitle URL to pass to VLC.
   ipcMain.handle('api:play', async (_, url, subtitleUrl = null) => {
-    let playableUrl = url
-    let playableSubtitleUrl = subtitleUrl
-
-    try {
-      if (typeof url === 'string' && url.startsWith('http')) {
-        const unlock = await allDebrid.unlockLink(url)
-        if (unlock?.status === 'success' && unlock?.data?.link) {
-          playableUrl = unlock.data.link
-        }
-      }
-    } catch {
-      // ignore unlock failures; we'll try to play the original url
-    }
-
-    // Resolve subtitle URL if provided
-    if (subtitleUrl) {
-      try {
-        if (typeof subtitleUrl === 'string' && subtitleUrl.startsWith('http')) {
-          const unlock = await allDebrid.unlockLink(subtitleUrl)
-          if (unlock?.status === 'success' && unlock?.data?.link) {
-            playableSubtitleUrl = unlock.data.link
-          }
-        }
-      } catch {
-        // ignore unlock failures; we'll try to use the original subtitle url
-      }
-    }
+    const [playableUrl, playableSubtitleUrl] = await Promise.all([
+      resolveDirectUrl(url),
+      subtitleUrl ? resolveDirectUrl(subtitleUrl) : null
+    ])
 
     vlc.play(playableUrl, playableSubtitleUrl, {
       enableEnglishSubtitles: library.getSubtitlesEnabledByDefault()
