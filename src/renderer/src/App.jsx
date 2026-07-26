@@ -8,7 +8,7 @@ import History from './components/History'
 import Toast from './components/Toast'
 import DownloadManager from './components/DownloadManager'
 import StatusModal from './components/StatusModal'
-import { watchedMatcher } from './utils'
+import { playableFiles, watchedMatcher } from './utils'
 import logo from './assets/logo.png'
 
 /**
@@ -387,9 +387,17 @@ function App() {
       }
       setCurrentMagnet(magnetContext)
 
-      // Find first unwatched file.
+      // Find the first unwatched file, considering only playable video files in the same
+      // order the file list shows them — a magnet's .txt/.nfo/subtitle entries are not
+      // things to "play next", and AllDebrid's raw order isn't episode order.
+      const videoFiles = playableFiles(allFiles)
+      if (videoFiles.length === 0) {
+        setStatusModal({ message: 'No playable video files in this magnet.', type: 'error' })
+        return
+      }
+
       const isWatched = watchedMatcher(entry.files.map((f) => f.filename))
-      const nextFile = allFiles.find((f) => !isWatched(f.filename))
+      const nextFile = videoFiles.find((f) => !isWatched(f.filename))
 
       if (nextFile) {
         setStatusModal({ message: 'Starting playback...', type: 'loading' })

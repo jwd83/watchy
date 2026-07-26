@@ -34,6 +34,21 @@ export const isVideoFile = (filename) =>
       .toLowerCase()
   )
 
+/** Natural sort comparator for filenames with episode numbers (S01E02 before S01E10). */
+export const naturalSortByFilename = (a, b) =>
+  String(a?.filename || '').localeCompare(String(b?.filename || ''), undefined, {
+    numeric: true,
+    sensitivity: 'base'
+  })
+
+/**
+ * The playable files of a magnet, in the order the UI lists them. Anything that isn't a
+ * video (.txt, .nfo, subtitles, ...) is dropped, so "next" can never resolve to a
+ * non-playable file, and the order matches what the file list shows.
+ */
+export const playableFiles = (files = []) =>
+  files.filter((f) => isVideoFile(f.filename)).sort(naturalSortByFilename)
+
 /** Download completion ratio in [0, 1]; 0 when the total size is unknown. */
 export const downloadRatio = ({ receivedBytes, totalBytes }) => {
   if (!totalBytes || totalBytes <= 0) return 0

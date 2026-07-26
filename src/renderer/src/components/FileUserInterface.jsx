@@ -1,4 +1,4 @@
-import { basename, basenameWithoutExt, isVideoFile, watchedMatcher } from '../utils'
+import { basename, basenameWithoutExt, playableFiles, watchedMatcher } from '../utils'
 
 const FileUserInterface = ({ files, onPlay, watchedFiles = [], onSave, magnetData, isSaved }) => {
   const resolveLink = async (url) => {
@@ -10,11 +10,6 @@ const FileUserInterface = ({ files, onPlay, watchedFiles = [], onSave, magnetDat
       // ignore and fall back
     }
     return url
-  }
-
-  // Natural sort comparator for filenames with episode numbers
-  const naturalSort = (a, b) => {
-    return a.filename.localeCompare(b.filename, undefined, { numeric: true, sensitivity: 'base' })
   }
 
   const subtitleExts = ['srt', 'sub', 'ass', 'ssa', 'vtt']
@@ -47,8 +42,7 @@ const FileUserInterface = ({ files, onPlay, watchedFiles = [], onSave, magnetDat
     return null
   }
 
-  // Filter for video files and sort naturally
-  const videoFiles = files.filter((f) => isVideoFile(f.filename)).sort(naturalSort)
+  const videoFiles = playableFiles(files)
 
   const isWatched = watchedMatcher(watchedFiles)
 
