@@ -96,7 +96,7 @@ sudo xattr -cr /Applications/watchy.app
 
 ### LICENSE
 
-Copyright 2025 Jared De Blander
+Copyright 2025-2026 Jared De Blander
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
